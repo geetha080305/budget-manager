@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budgets - Expense Manager</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav></nav>
+    
+    <div class="container-fluid">
+        <h1 style="margin-bottom: 20px;">Budget Management</h1>
+
+        <!-- Add Budget Form -->
+        <div class="form-container">
+            <h5>Set Budget</h5>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="budgetCategory">Category (leave empty for overall)</label>
+                    <select id="budgetCategory">
+                        <option value="">Overall Monthly</option>
+                        <option value="FOOD">Food</option>
+                        <option value="TRANSPORT">Transport</option>
+                        <option value="EDUCATION">Education</option>
+                        <option value="SHOPPING">Shopping</option>
+                        <option value="RENT">Rent</option>
+                        <option value="BILLS">Bills</option>
+                        <option value="ENTERTAINMENT">Entertainment</option>
+                        <option value="HEALTHCARE">Healthcare</option>
+                        <option value="OTHER">Other</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="budgetAmount">Amount</label>
+                    <input type="number" id="budgetAmount" placeholder="Budget amount" step="0.01">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="budgetYear">Year</label>
+                    <input type="number" id="budgetYear" min="2020" max="2030">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="budgetMonth">Month</label>
+                    <select id="budgetMonth">
+                        <option value="1">January</option>
+                        <option value="2">February</option>
+                        <option value="3">March</option>
+                        <option value="4">April</option>
+                        <option value="5">May</option>
+                        <option value="6">June</option>
+                        <option value="7">July</option>
+                        <option value="8">August</option>
+                        <option value="9">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-success" onclick="addBudget()">Set Budget</button>
+        </div>
+
+        <!-- Filter -->
+        <div class="form-container" style="max-width: 400px;">
+            <div style="display: flex; gap: 10px;">
+                <select id="filterYear" style="flex: 1;">
+                    <option value="">Year</option>
+                </select>
+                <select id="filterMonth" style="flex: 1;">
+                    <option value="">Month</option>
+                </select>
+                <button class="btn btn-secondary" onclick="filterBudgets()">Load</button>
+            </div>
+        </div>
+
+        <!-- Budget List -->
+        <div class="table-container">
+            <h5>Budgets</h5>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Budget</th>
+                        <th>Spent</th>
+                        <th>Remaining</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="budgetBody">
+                    <tr><td colspan="6" style="text-align: center; color: #999;">No budgets set</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+    <script>
+        checkAuth();
+        updateNavbar();
+
+        async function loadBudgets() {
+            const year = document.getElementById('filterYear').value || null;
+            const month = document.getElementById('filterMonth').value || null;
+            try {
+                const data = await ApiClient.getBudgets(year, month);
+                displayBudgets(data);
+            } catch (error) {
+                showAlert('Failed to load budgets: ' + error.message, 'danger');
+            }
+        }
+
+        function filterBudgets() {
+            loadBudgets();
+        }
+
+        function displayBudgets(budgets) {
+            const tbody = document.getElementById('budgetBody');
+            if (budgets.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">No budgets set</td></tr>';
+            } else {
+                tbody.innerHTML = budgets.map(b => `
+                    <tr>
+                        <td>${b.category || 'Overall'}</td>
+                        <td>${formatCurrency(b.amount)}</td>
+                        <td>${formatCurrency(b.spent)}</td>
+                        <td>${formatCurrency(b.remaining)}</td>
+                        <td><span class="badge ${b.exceeded ? 'badge-danger' : 'badge-success'}">${b.exceeded ? 'Exceeded' : 'On Track'}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-danger" onclick="deleteBudget(${b.id})">Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        async function addBudget() {
+            const category = document.getElementById('budgetCategory').value || null;
+            const amount = document.getElementById('budgetAmount').value.trim();
+            const year = parseInt(document.getElementById('budgetYear').value);
+            const month = parseInt(document.getElementById('budgetMonth').value);
+
+            if (!amount || !year || !month) {
+                showAlert('Please fill in all required fields', 'warning');
+                return;
+            }
+
+            try {
+                await ApiClient.createBudget(category, amount, year, month);
+                showAlert('Budget set successfully!', 'success');
+                document.getElementById('budgetAmount').value = '';
+                filterBudgets();
+            } catch (error) {
+                showAlert('Failed to set budget: ' + error.message, 'danger');
+            }
+        }
+
+        async function deleteBudget(id) {
+            if (!confirm('Delete this budget?')) return;
+            try {
+                await ApiClient.deleteBudget(id);
+                showAlert('Budget deleted!', 'success');
+                loadBudgets();
+            } catch (error) {
+                showAlert('Failed to delete budget: ' + error.message, 'danger');
+            }
+        }
+
+        // Set defaults
+        const now = new Date();
+        document.getElementById('budgetYear').value = now.getFullYear();
+        document.getElementById('budgetMonth').value = now.getMonth() + 1;
+        document.getElementById('filterYear').value = now.getFullYear();
+        document.getElementById('filterMonth').value = now.getMonth() + 1;
+        loadBudgets();
+    </script>
+</body>
+</html>

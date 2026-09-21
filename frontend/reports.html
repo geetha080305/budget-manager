@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports - Expense Manager</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav></nav>
+    
+    <div class="container-fluid">
+        <h1 style="margin-bottom: 20px;">Financial Reports</h1>
+
+        <!-- Report Selector -->
+        <div class="form-container">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="btn btn-primary" onclick="showDailyReport()">Daily</button>
+                <button class="btn btn-primary" onclick="showWeeklyReport()">Weekly</button>
+                <button class="btn btn-primary" onclick="showMonthlyReport()">Monthly</button>
+                <button class="btn btn-primary" onclick="showCategoryAnalysis()">Category Analysis</button>
+                <button class="btn btn-primary" onclick="showIncomeVsExpense()">Income vs Expense</button>
+                <button class="btn btn-primary" onclick="showMonthlyComparison()">Monthly Comparison</button>
+            </div>
+        </div>
+
+        <!-- Daily Report -->
+        <div id="dailySection" style="display: none;">
+            <div class="form-container" style="max-width: 300px;">
+                <input type="date" id="dailyDate" style="width: 100%; margin-bottom: 10px;">
+                <button class="btn btn-success" onclick="loadDailyReport()" style="width: 100%;">Load Daily Report</button>
+            </div>
+            <div class="table-container" id="dailyResult"></div>
+        </div>
+
+        <!-- Weekly Report -->
+        <div id="weeklySection" style="display: none;">
+            <div class="form-container" style="max-width: 300px;">
+                <input type="date" id="weeklyDate" style="width: 100%; margin-bottom: 10px;">
+                <button class="btn btn-success" onclick="loadWeeklyReport()" style="width: 100%;">Load Weekly Report</button>
+            </div>
+            <div class="table-container" id="weeklyResult"></div>
+        </div>
+
+        <!-- Monthly Report -->
+        <div id="monthlySection" style="display: none;">
+            <div class="form-container" style="max-width: 400px;">
+                <div style="display: flex; gap: 10px;">
+                    <input type="number" id="monthlyYear" min="2020" max="2030" style="flex: 1;">
+                    <select id="monthlyMonth" style="flex: 1;">
+                        <option value="1">January</option>
+                        <option value="2">February</option>
+                        <option value="3">March</option>
+                        <option value="4">April</option>
+                        <option value="5">May</option>
+                        <option value="6">June</option>
+                        <option value="7">July</option>
+                        <option value="8">August</option>
+                        <option value="9">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                    <button class="btn btn-success" onclick="loadMonthlyReport()">Load</button>
+                </div>
+            </div>
+            <div class="table-container" id="monthlyResult"></div>
+        </div>
+
+        <!-- Category Analysis -->
+        <div id="categorySection" style="display: none;">
+            <div class="form-container" style="max-width: 400px;">
+                <div style="display: flex; gap: 10px;">
+                    <input type="date" id="catStart" style="flex: 1;">
+                    <input type="date" id="catEnd" style="flex: 1;">
+                    <button class="btn btn-success" onclick="loadCategoryAnalysis()">Load</button>
+                </div>
+            </div>
+            <div class="table-container" id="categoryResult"></div>
+        </div>
+
+        <!-- Income vs Expense -->
+        <div id="incomeExpenseSection" style="display: none;">
+            <div class="form-container" style="max-width: 400px;">
+                <div style="display: flex; gap: 10px;">
+                    <input type="date" id="ieStart" style="flex: 1;">
+                    <input type="date" id="ieEnd" style="flex: 1;">
+                    <button class="btn btn-success" onclick="loadIncomeVsExpense()">Load</button>
+                </div>
+            </div>
+            <div class="table-container" id="incomeExpenseResult"></div>
+        </div>
+
+        <!-- Monthly Comparison -->
+        <div id="comparisonSection" style="display: none;">
+            <div class="form-container" style="max-width: 300px;">
+                <div style="display: flex; gap: 10px;">
+                    <input type="number" id="comparisonMonths" value="6" min="1" max="24" style="flex: 1;">
+                    <button class="btn btn-success" onclick="loadMonthlyComparison()">Load</button>
+                </div>
+            </div>
+            <div class="table-container" id="comparisonResult"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+    <script>
+        checkAuth();
+        updateNavbar();
+
+        function hideAll() {
+            document.getElementById('dailySection').style.display = 'none';
+            document.getElementById('weeklySection').style.display = 'none';
+            document.getElementById('monthlySection').style.display = 'none';
+            document.getElementById('categorySection').style.display = 'none';
+            document.getElementById('incomeExpenseSection').style.display = 'none';
+            document.getElementById('comparisonSection').style.display = 'none';
+        }
+
+        function showDailyReport() {
+            hideAll();
+            document.getElementById('dailySection').style.display = 'block';
+            document.getElementById('dailyDate').valueAsDate = new Date();
+        }
+
+        async function loadDailyReport() {
+            const date = document.getElementById('dailyDate').value;
+            try {
+                const data = await ApiClient.getDailyReport(date);
+                const html = `
+                    <h5>Daily Report for ${formatDate(data.date)}</h5>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px;">
+                        <div class="stats-card income"><h5>Income</h5><div class="amount">${formatCurrency(data.totalIncome)}</div></div>
+                        <div class="stats-card expense"><h5>Expenses</h5><div class="amount">${formatCurrency(data.totalExpense)}</div></div>
+                        <div class="stats-card"><h5>Balance</h5><div class="amount">${formatCurrency(data.totalIncome - data.totalExpense)}</div></div>
+                    </div>
+                    <table>
+                        <thead><tr><th>Type</th><th>Description</th><th>Amount</th></tr></thead>
+                        <tbody>
+                            ${data.transactions.map(t => `
+                                <tr>
+                                    <td><span class="badge ${t.type === 'INCOME' ? 'badge-success' : 'badge-danger'}">${t.type}</span></td>
+                                    <td>${t.label}</td>
+                                    <td>${formatCurrency(t.amount)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+                document.getElementById('dailyResult').innerHTML = html;
+            } catch (error) {
+                showAlert('Failed to load report: ' + error.message, 'danger');
+            }
+        }
+
+        function showWeeklyReport() {
+            hideAll();
+            document.getElementById('weeklySection').style.display = 'block';
+            document.getElementById('weeklyDate').valueAsDate = new Date();
+        }
+
+        async function loadWeeklyReport() {
+            const date = document.getElementById('weeklyDate').value;
+            try {
+                const data = await ApiClient.getWeeklyReport(date);
+                const html = `
+                    <h5>Weekly Report (${formatDate(data.weekStart)} to ${formatDate(data.weekEnd)})</h5>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px;">
+                        <div class="stats-card income"><h5>Income</h5><div class="amount">${formatCurrency(data.totalIncome)}</div></div>
+                        <div class="stats-card expense"><h5>Expenses</h5><div class="amount">${formatCurrency(data.totalExpense)}</div></div>
+                        <div class="stats-card"><h5>Balance</h5><div class="amount">${formatCurrency(data.totalIncome - data.totalExpense)}</div></div>
+                    </div>
+                    <table>
+                        <thead><tr><th>Date</th><th>Income</th><th>Expense</th></tr></thead>
+                        <tbody>
+                            ${data.dailyTotals.map(d => `
+                                <tr>
+                                    <td>${formatDate(d.date)}</td>
+                                    <td>${formatCurrency(d.income)}</td>
+                                    <td>${formatCurrency(d.expense)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+                document.getElementById('weeklyResult').innerHTML = html;
+            } catch (error) {
+                showAlert('Failed to load report: ' + error.message, 'danger');
+            }
+        }
+
+        function showMonthlyReport() {
+            hideAll();
+            document.getElementById('monthlySection').style.display = 'block';
+            const now = new Date();
+            document.getElementById('monthlyYear').value = now.getFullYear();
+            document.getElementById('monthlyMonth').value = now.getMonth() + 1;
+        }
+
+        async function loadMonthlyReport() {
+            const year = parseInt(document.getElementById('monthlyYear').value);
+            const month = parseInt(document.getElementById('monthlyMonth').value);
+            try {
+                const data = await ApiClient.getMonthlyReport(year, month);
+                const categoryHtml = data.categoryBreakdown.map(c => `
+                    <tr><td>${c.category}</td><td>${formatCurrency(c.total)}</td></tr>
+                `).join('');
+                const html = `
+                    <h5>Monthly Report - ${new Date(year, month-1).toLocaleDateString('en-IN', {month: 'long', year: 'numeric'})}</h5>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px;">
+                        <div class="stats-card income"><h5>Income</h5><div class="amount">${formatCurrency(data.totalIncome)}</div></div>
+                        <div class="stats-card expense"><h5>Expenses</h5><div class="amount">${formatCurrency(data.totalExpense)}</div></div>
+                        <div class="stats-card"><h5>Balance</h5><div class="amount">${formatCurrency(data.balance)}</div></div>
+                    </div>
+                    <h6 style="margin-top: 20px;">Expense by Category</h6>
+                    <table>
+                        <thead><tr><th>Category</th><th>Amount</th></tr></thead>
+                        <tbody>${categoryHtml || '<tr><td colspan="2">No expenses</td></tr>'}</tbody>
+                    </table>
+                `;
+                document.getElementById('monthlyResult').innerHTML = html;
+            } catch (error) {
+                showAlert('Failed to load report: ' + error.message, 'danger');
+            }
+        }
+
+        function showCategoryAnalysis() {
+            hideAll();
+            document.getElementById('categorySection').style.display = 'block';
+            const now = new Date();
+            document.getElementById('catEnd').valueAsDate = now;
+            const start = new Date(now.getFullYear(), now.getMonth(), 1);
+            document.getElementById('catStart').valueAsDate = start;
+        }
+
+        async function loadCategoryAnalysis() {
+            const start = document.getElementById('catStart').value;
+            const end = document.getElementById('catEnd').value;
+            try {
+                const data = await ApiClient.getCategoryAnalysis(start, end);
+                const catHtml = data.categories.map(c => `
+                    <tr>
+                        <td>${c.category}</td>
+                        <td>${formatCurrency(c.total)}</td>
+                        <td>${c.percentageOfTotal}%</td>
+                    </tr>
+                `).join('');
+                const html = `
+                    <h5>Category Analysis (${start} to ${end})</h5>
+                    <div class="stats-card expense" style="margin-bottom: 20px;"><h5>Total Expense</h5><div class="amount">${formatCurrency(data.totalExpense)}</div></div>
+                    <table>
+                        <thead><tr><th>Category</th><th>Amount</th><th>Percentage</th></tr></thead>
+                        <tbody>${catHtml || '<tr><td colspan="3">No expenses</td></tr>'}</tbody>
+                    </table>
+                `;
+                document.getElementById('categoryResult').innerHTML = html;
+            } catch (error) {
+                showAlert('Failed to load report: ' + error.message, 'danger');
+            }
+        }
+
+        function showIncomeVsExpense() {
+            hideAll();
+            document.getElementById('incomeExpenseSection').style.display = 'block';
+            const now = new Date();
+            document.getElementById('ieEnd').valueAsDate = now;
+            const start = new Date(now.getFullYear(), now.getMonth(), 1);
+            document.getElementById('ieStart').valueAsDate = start;
+        }
+
+        async function loadIncomeVsExpense() {
+            const start = document.getElementById('ieStart').value;
+            const end = document.getElementById('ieEnd').value;
+            try {
+                const data = await ApiClient.getIncomeVsExpense(start, end);
+                const html = `
+                    <h5>Income vs Expense (${start} to ${end})</h5>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px;">
+                        <div class="stats-card income"><h5>Income</h5><div class="amount">${formatCurrency(data.totalIncome)}</div></div>
+                        <div class="stats-card expense"><h5>Expenses</h5><div class="amount">${formatCurrency(data.totalExpense)}</div></div>
+                    </div>
+                    <div class="stats-card" style="margin-bottom: 20px;">
+                        <h5>Balance</h5>
+                        <div class="amount" style="color: ${data.balance >= 0 ? '#28a745' : '#dc3545'};">${formatCurrency(data.balance)}</div>
+                    </div>
+                    ${data.savingsRatePercent !== null ? `<p><strong>Savings Rate:</strong> ${data.savingsRatePercent}%</p>` : ''}
+                `;
+                document.getElementById('incomeExpenseResult').innerHTML = html;
+            } catch (error) {
+                showAlert('Failed to load report: ' + error.message, 'danger');
+            }
+        }
+
+        function showMonthlyComparison() {
+            hideAll();
+            document.getElementById('comparisonSection').style.display = 'block';
+        }
+
+        async function loadMonthlyComparison() {
+            const months = parseInt(document.getElementById('comparisonMonths').value);
+            try {
+                const data = await ApiClient.getMonthlyComparison(months);
+                const rows = data.map(m => `
+                    <tr>
+                        <td>${new Date(m.year, m.month-1).toLocaleDateString('en-IN', {month: 'short', year: 'numeric'})}</td>
+                        <td>${formatCurrency(m.totalIncome)}</td>
+                        <td>${formatCurrency(m.totalExpense)}</td>
+                        <td>${formatCurrency(m.balance)}</td>
+                    </tr>
+                `).join('');
+                const html = `
+                    <h5>Monthly Comparison (Last ${months} months)</h5>
+                    <table>
+                        <thead><tr><th>Month</th><th>Income</th><th>Expense</th><th>Balance</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                `;
+                document.getElementById('comparisonResult').innerHTML = html;
+            } catch (error) {
+                showAlert('Failed to load report: ' + error.message, 'danger');
+            }
+        }
+    </script>
+</body>
+</html>

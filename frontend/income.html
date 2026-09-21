@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Income - Expense Manager</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav></nav>
+    
+    <div class="container-fluid">
+        <h1 style="margin-bottom: 20px;">Income Management</h1>
+
+        <!-- Add Income Form -->
+        <div class="form-container">
+            <h5>Add Income</h5>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="incomeSource">Source</label>
+                    <input type="text" id="incomeSource" placeholder="e.g., Salary, Bonus">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="incomeAmount">Amount</label>
+                    <input type="number" id="incomeAmount" placeholder="Amount" step="0.01">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="incomeDate">Date</label>
+                    <input type="date" id="incomeDate">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="incomeDesc">Description</label>
+                <textarea id="incomeDesc" placeholder="Optional notes" rows="2"></textarea>
+            </div>
+            <button class="btn btn-success" onclick="addIncome()">Add Income</button>
+        </div>
+
+        <!-- Filter -->
+        <div class="form-container" style="max-width: 500px;">
+            <div style="display: flex; gap: 10px;">
+                <input type="date" id="filterStart" style="flex: 1;">
+                <input type="date" id="filterEnd" style="flex: 1;">
+                <button class="btn btn-secondary" onclick="filterIncome()">Filter</button>
+                <button class="btn btn-secondary" onclick="loadAllIncome()">All</button>
+            </div>
+        </div>
+
+        <!-- Income List -->
+        <div class="table-container">
+            <h5>Income Records</h5>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Source</th>
+                        <th>Amount</th>
+                        <th>Description</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="incomeBody">
+                    <tr><td colspan="5" style="text-align: center; color: #999;">No income records</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="form-container" style="max-width: 400px; margin: 0;">
+            <h5>Edit Income</h5>
+            <div class="form-group">
+                <label for="editSource">Source</label>
+                <input type="text" id="editSource">
+            </div>
+            <div class="form-group">
+                <label for="editAmount">Amount</label>
+                <input type="number" id="editAmount" step="0.01">
+            </div>
+            <div class="form-group">
+                <label for="editDate">Date</label>
+                <input type="date" id="editDate">
+            </div>
+            <div class="form-group">
+                <label for="editDesc">Description</label>
+                <textarea id="editDesc" rows="2"></textarea>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="saveIncome()" style="flex: 1;">Save</button>
+                <button class="btn btn-secondary" onclick="closeEditModal()" style="flex: 1;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+    <script>
+        checkAuth();
+        updateNavbar();
+
+        let currentEditId = null;
+
+        async function loadAllIncome() {
+            try {
+                const data = await ApiClient.getIncome();
+                displayIncome(data);
+            } catch (error) {
+                showAlert('Failed to load income: ' + error.message, 'danger');
+            }
+        }
+
+        async function filterIncome() {
+            const start = document.getElementById('filterStart').value;
+            const end = document.getElementById('filterEnd').value;
+            if (!start || !end) {
+                showAlert('Please select both dates', 'warning');
+                return;
+            }
+            try {
+                const data = await ApiClient.getIncome(start, end);
+                displayIncome(data);
+            } catch (error) {
+                showAlert('Failed to filter income: ' + error.message, 'danger');
+            }
+        }
+
+        function displayIncome(incomes) {
+            const tbody = document.getElementById('incomeBody');
+            if (incomes.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">No income records</td></tr>';
+            } else {
+                tbody.innerHTML = incomes.map(income => `
+                    <tr>
+                        <td>${formatDate(income.date)}</td>
+                        <td>${income.source}</td>
+                        <td>${formatCurrency(income.amount)}</td>
+                        <td>${income.description || '-'}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="editIncome(${income.id})">Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteIncome(${income.id})">Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        async function addIncome() {
+            const source = document.getElementById('incomeSource').value.trim();
+            const amount = document.getElementById('incomeAmount').value.trim();
+            const date = document.getElementById('incomeDate').value;
+            const description = document.getElementById('incomeDesc').value.trim();
+
+            if (!source || !amount || !date) {
+                showAlert('Please fill in all required fields', 'warning');
+                return;
+            }
+
+            try {
+                await ApiClient.createIncome(source, amount, date, description);
+                showAlert('Income added successfully!', 'success');
+                document.getElementById('incomeSource').value = '';
+                document.getElementById('incomeAmount').value = '';
+                document.getElementById('incomeDate').value = '';
+                document.getElementById('incomeDesc').value = '';
+                loadAllIncome();
+            } catch (error) {
+                showAlert('Failed to add income: ' + error.message, 'danger');
+            }
+        }
+
+        async function editIncome(id) {
+            try {
+                const income = await ApiClient.getIncomeById(id);
+                currentEditId = id;
+                document.getElementById('editSource').value = income.source;
+                document.getElementById('editAmount').value = income.amount;
+                document.getElementById('editDate').value = income.date;
+                document.getElementById('editDesc').value = income.description || '';
+                document.getElementById('editModal').style.display = 'flex';
+            } catch (error) {
+                showAlert('Failed to load income: ' + error.message, 'danger');
+            }
+        }
+
+        async function saveIncome() {
+            const source = document.getElementById('editSource').value.trim();
+            const amount = document.getElementById('editAmount').value.trim();
+            const date = document.getElementById('editDate').value;
+            const description = document.getElementById('editDesc').value.trim();
+
+            if (!source || !amount || !date) {
+                showAlert('Please fill in all required fields', 'warning');
+                return;
+            }
+
+            try {
+                await ApiClient.updateIncome(currentEditId, source, amount, date, description);
+                showAlert('Income updated successfully!', 'success');
+                closeEditModal();
+                loadAllIncome();
+            } catch (error) {
+                showAlert('Failed to update income: ' + error.message, 'danger');
+            }
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+            currentEditId = null;
+        }
+
+        async function deleteIncome(id) {
+            if (!confirm('Are you sure you want to delete this income record?')) return;
+            try {
+                await ApiClient.deleteIncome(id);
+                showAlert('Income deleted successfully!', 'success');
+                loadAllIncome();
+            } catch (error) {
+                showAlert('Failed to delete income: ' + error.message, 'danger');
+            }
+        }
+
+        // Set today's date as default
+        document.getElementById('incomeDate').valueAsDate = new Date();
+        loadAllIncome();
+    </script>
+</body>
+</html>

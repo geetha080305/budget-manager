@@ -1,0 +1,9 @@
+package com.expensemanager.model;
+
+public enum PaymentMethod {
+    CASH,
+    CARD,
+    UPI,
+    BANK_TRANSFER,
+    OTHER
+}

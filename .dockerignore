@@ -1,0 +1,24 @@
+# Git
+.git
+.gitignore
+
+# Maven & Build artifacts
+target/
+*.class
+*.jar
+*.war
+
+# IDE & Editor files
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

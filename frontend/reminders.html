@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Reminders - Expense Manager</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav></nav>
+    
+    <div class="container-fluid">
+        <h1 style="margin-bottom: 20px;">Payment Reminders</h1>
+
+        <!-- Add Reminder Form -->
+        <div class="form-container">
+            <h5>Add Bill Reminder</h5>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="billName">Bill Name</label>
+                    <input type="text" id="billName" placeholder="e.g., Electricity Bill">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="billAmount">Amount</label>
+                    <input type="number" id="billAmount" placeholder="Amount" step="0.01">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="dueDate">Due Date</label>
+                    <input type="date" id="dueDate">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="isRecurring">
+                        <input type="checkbox" id="isRecurring"> Recurring Monthly
+                    </label>
+                </div>
+            </div>
+            <button class="btn btn-success" onclick="addReminder()">Add Reminder</button>
+        </div>
+
+        <!-- Reminders List -->
+        <div class="table-container">
+            <h5>Upcoming Reminders</h5>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Bill Name</th>
+                        <th>Amount</th>
+                        <th>Due Date</th>
+                        <th>Status</th>
+                        <th>Recurring</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="reminderBody">
+                    <tr><td colspan="6" style="text-align: center; color: #999;">No reminders</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+    <script>
+        checkAuth();
+        updateNavbar();
+
+        async function loadReminders() {
+            try {
+                const data = await ApiClient.getReminders();
+                displayReminders(data);
+            } catch (error) {
+                showAlert('Failed to load reminders: ' + error.message, 'danger');
+            }
+        }
+
+        function getStatusBadge(status) {
+            const badges = {
+                'UPCOMING': 'badge-upcoming',
+                'DUE': 'badge-warning',
+                'OVERDUE': 'badge-overdue',
+                'PAID': 'badge-success'
+            };
+            return badges[status] || 'badge-secondary';
+        }
+
+        function displayReminders(reminders) {
+            const tbody = document.getElementById('reminderBody');
+            if (reminders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">No reminders</td></tr>';
+            } else {
+                tbody.innerHTML = reminders.map(r => `
+                    <tr>
+                        <td>${r.billName}</td>
+                        <td>${formatCurrency(r.amount)}</td>
+                        <td>${formatDate(r.dueDate)}</td>
+                        <td><span class="badge ${getStatusBadge(r.status)}">${r.status}</span></td>
+                        <td>${r.recurring ? 'Yes' : 'No'}</td>
+                        <td>
+                            ${r.status !== 'PAID' ? `<button class="btn btn-sm btn-success" onclick="markPaid(${r.id})">Mark Paid</button>` : ''}
+                            <button class="btn btn-sm btn-danger" onclick="deleteReminder(${r.id})">Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        async function addReminder() {
+            const name = document.getElementById('billName').value.trim();
+            const amount = document.getElementById('billAmount').value.trim();
+            const date = document.getElementById('dueDate').value;
+            const recurring = document.getElementById('isRecurring').checked;
+
+            if (!name || !amount || !date) {
+                showAlert('Please fill in all required fields', 'warning');
+                return;
+            }
+
+            try {
+                await ApiClient.createReminder(name, amount, date, recurring);
+                showAlert('Reminder added successfully!', 'success');
+                document.getElementById('billName').value = '';
+                document.getElementById('billAmount').value = '';
+                document.getElementById('dueDate').value = '';
+                document.getElementById('isRecurring').checked = false;
+                loadReminders();
+            } catch (error) {
+                showAlert('Failed to add reminder: ' + error.message, 'danger');
+            }
+        }
+
+        async function markPaid(id) {
+            try {
+                await ApiClient.markReminderPaid(id);
+                showAlert('Bill marked as paid!', 'success');
+                loadReminders();
+            } catch (error) {
+                showAlert('Failed to mark as paid: ' + error.message, 'danger');
+            }
+        }
+
+        async function deleteReminder(id) {
+            if (!confirm('Delete this reminder?')) return;
+            try {
+                await ApiClient.deleteReminder(id);
+                showAlert('Reminder deleted!', 'success');
+                loadReminders();
+            } catch (error) {
+                showAlert('Failed to delete reminder: ' + error.message, 'danger');
+            }
+        }
+
+        loadReminders();
+    </script>
+</body>
+</html>

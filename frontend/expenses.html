@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expenses - Expense Manager</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav></nav>
+    
+    <div class="container-fluid">
+        <h1 style="margin-bottom: 20px;">Expense Management</h1>
+
+        <!-- Add Expense Form -->
+        <div class="form-container">
+            <h5>Add Expense</h5>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="expenseCategory">Category</label>
+                    <select id="expenseCategory">
+                        <option value="">Select category</option>
+                        <option value="FOOD">Food</option>
+                        <option value="TRANSPORT">Transport</option>
+                        <option value="EDUCATION">Education</option>
+                        <option value="SHOPPING">Shopping</option>
+                        <option value="RENT">Rent</option>
+                        <option value="BILLS">Bills</option>
+                        <option value="ENTERTAINMENT">Entertainment</option>
+                        <option value="HEALTHCARE">Healthcare</option>
+                        <option value="OTHER">Other</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="expenseAmount">Amount</label>
+                    <input type="number" id="expenseAmount" placeholder="Amount" step="0.01">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="paymentMethod">Payment Method</label>
+                    <select id="paymentMethod">
+                        <option value="">Select method</option>
+                        <option value="CASH">Cash</option>
+                        <option value="CARD">Card</option>
+                        <option value="UPI">UPI</option>
+                        <option value="BANK_TRANSFER">Bank Transfer</option>
+                        <option value="OTHER">Other</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="expenseDate">Date</label>
+                    <input type="date" id="expenseDate">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="expenseDesc">Description</label>
+                <textarea id="expenseDesc" placeholder="Optional notes" rows="2"></textarea>
+            </div>
+            <button class="btn btn-success" onclick="addExpense()">Add Expense</button>
+        </div>
+
+        <!-- Filter -->
+        <div class="form-container" style="max-width: 600px;">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <input type="date" id="filterStart" style="flex: 1; min-width: 150px;">
+                <input type="date" id="filterEnd" style="flex: 1; min-width: 150px;">
+                <select id="filterCategory" style="flex: 1; min-width: 150px;">
+                    <option value="">All Categories</option>
+                    <option value="FOOD">Food</option>
+                    <option value="TRANSPORT">Transport</option>
+                    <option value="EDUCATION">Education</option>
+                    <option value="SHOPPING">Shopping</option>
+                    <option value="RENT">Rent</option>
+                    <option value="BILLS">Bills</option>
+                    <option value="ENTERTAINMENT">Entertainment</option>
+                    <option value="HEALTHCARE">Healthcare</option>
+                    <option value="OTHER">Other</option>
+                </select>
+                <button class="btn btn-secondary" onclick="filterExpenses()">Filter</button>
+                <button class="btn btn-secondary" onclick="loadAllExpenses()">All</button>
+            </div>
+        </div>
+
+        <!-- Expense List -->
+        <div class="table-container">
+            <h5>Expense Records</h5>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>Method</th>
+                        <th>Description</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="expenseBody">
+                    <tr><td colspan="6" style="text-align: center; color: #999;">No expense records</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="form-container" style="max-width: 400px; margin: 0;">
+            <h5>Edit Expense</h5>
+            <div class="form-group">
+                <label for="editCategory">Category</label>
+                <select id="editCategory">
+                    <option value="FOOD">Food</option>
+                    <option value="TRANSPORT">Transport</option>
+                    <option value="EDUCATION">Education</option>
+                    <option value="SHOPPING">Shopping</option>
+                    <option value="RENT">Rent</option>
+                    <option value="BILLS">Bills</option>
+                    <option value="ENTERTAINMENT">Entertainment</option>
+                    <option value="HEALTHCARE">Healthcare</option>
+                    <option value="OTHER">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="editAmount">Amount</label>
+                <input type="number" id="editAmount" step="0.01">
+            </div>
+            <div class="form-group">
+                <label for="editMethod">Payment Method</label>
+                <select id="editMethod">
+                    <option value="CASH">Cash</option>
+                    <option value="CARD">Card</option>
+                    <option value="UPI">UPI</option>
+                    <option value="BANK_TRANSFER">Bank Transfer</option>
+                    <option value="OTHER">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="editDate">Date</label>
+                <input type="date" id="editDate">
+            </div>
+            <div class="form-group">
+                <label for="editDesc">Description</label>
+                <textarea id="editDesc" rows="2"></textarea>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="saveExpense()" style="flex: 1;">Save</button>
+                <button class="btn btn-secondary" onclick="closeEditModal()" style="flex: 1;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+    <script>
+        checkAuth();
+        updateNavbar();
+
+        let currentEditId = null;
+
+        async function loadAllExpenses() {
+            try {
+                const data = await ApiClient.getExpenses();
+                displayExpenses(data);
+            } catch (error) {
+                showAlert('Failed to load expenses: ' + error.message, 'danger');
+            }
+        }
+
+        async function filterExpenses() {
+            const start = document.getElementById('filterStart').value;
+            const end = document.getElementById('filterEnd').value;
+            const category = document.getElementById('filterCategory').value;
+
+            if (!start || !end) {
+                showAlert('Please select both dates', 'warning');
+                return;
+            }
+
+            try {
+                const data = await ApiClient.getExpenses(start, end, category);
+                displayExpenses(data);
+            } catch (error) {
+                showAlert('Failed to filter expenses: ' + error.message, 'danger');
+            }
+        }
+
+        function displayExpenses(expenses) {
+            const tbody = document.getElementById('expenseBody');
+            if (expenses.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">No expense records</td></tr>';
+            } else {
+                tbody.innerHTML = expenses.map(exp => `
+                    <tr>
+                        <td>${formatDate(exp.date)}</td>
+                        <td><span class="badge badge-secondary">${exp.category}</span></td>
+                        <td>${formatCurrency(exp.amount)}</td>
+                        <td>${exp.paymentMethod}</td>
+                        <td>${exp.description || '-'}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="editExpense(${exp.id})">Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteExpense(${exp.id})">Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        async function addExpense() {
+            const category = document.getElementById('expenseCategory').value;
+            const amount = document.getElementById('expenseAmount').value.trim();
+            const method = document.getElementById('paymentMethod').value;
+            const date = document.getElementById('expenseDate').value;
+            const description = document.getElementById('expenseDesc').value.trim();
+
+            if (!category || !amount || !method || !date) {
+                showAlert('Please fill in all required fields', 'warning');
+                return;
+            }
+
+            try {
+                const resp = await ApiClient.createExpense(category, amount, method, date, description);
+                showAlert('Expense added successfully!', 'success');
+                if (resp.budgetAlert) {
+                    showAlert(`⚠️ ${resp.budgetAlert.scope} Budget Alert: ${resp.budgetAlert.exceeded ? 'EXCEEDED!' : 'Approaching limit'}`, 'warning');
+                }
+                document.getElementById('expenseCategory').value = '';
+                document.getElementById('expenseAmount').value = '';
+                document.getElementById('paymentMethod').value = '';
+                document.getElementById('expenseDate').value = '';
+                document.getElementById('expenseDesc').value = '';
+                loadAllExpenses();
+            } catch (error) {
+                showAlert('Failed to add expense: ' + error.message, 'danger');
+            }
+        }
+
+        async function editExpense(id) {
+            try {
+                const expense = await ApiClient.getExpenseById(id);
+                currentEditId = id;
+                document.getElementById('editCategory').value = expense.category;
+                document.getElementById('editAmount').value = expense.amount;
+                document.getElementById('editMethod').value = expense.paymentMethod;
+                document.getElementById('editDate').value = expense.date;
+                document.getElementById('editDesc').value = expense.description || '';
+                document.getElementById('editModal').style.display = 'flex';
+            } catch (error) {
+                showAlert('Failed to load expense: ' + error.message, 'danger');
+            }
+        }
+
+        async function saveExpense() {
+            const category = document.getElementById('editCategory').value;
+            const amount = document.getElementById('editAmount').value.trim();
+            const method = document.getElementById('editMethod').value;
+            const date = document.getElementById('editDate').value;
+            const description = document.getElementById('editDesc').value.trim();
+
+            if (!category || !amount || !method || !date) {
+                showAlert('Please fill in all required fields', 'warning');
+                return;
+            }
+
+            try {
+                await ApiClient.updateExpense(currentEditId, category, amount, method, date, description);
+                showAlert('Expense updated successfully!', 'success');
+                closeEditModal();
+                loadAllExpenses();
+            } catch (error) {
+                showAlert('Failed to update expense: ' + error.message, 'danger');
+            }
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+            currentEditId = null;
+        }
+
+        async function deleteExpense(id) {
+            if (!confirm('Are you sure you want to delete this expense?')) return;
+            try {
+                await ApiClient.deleteExpense(id);
+                showAlert('Expense deleted successfully!', 'success');
+                loadAllExpenses();
+            } catch (error) {
+                showAlert('Failed to delete expense: ' + error.message, 'danger');
+            }
+        }
+
+        // Set today's date as default
+        document.getElementById('expenseDate').valueAsDate = new Date();
+        loadAllExpenses();
+    </script>
+</body>
+</html>

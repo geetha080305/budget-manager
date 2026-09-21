@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Savings Goals - Expense Manager</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav></nav>
+    
+    <div class="container-fluid">
+        <h1 style="margin-bottom: 20px;">Savings Goals</h1>
+
+        <!-- Add Goal Form -->
+        <div class="form-container">
+            <h5>Create Savings Goal</h5>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="goalName">Goal Name</label>
+                    <input type="text" id="goalName" placeholder="e.g., Laptop, Vacation">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="targetAmount">Target Amount</label>
+                    <input type="number" id="targetAmount" placeholder="Target amount" step="0.01">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="targetDate">Target Date (optional)</label>
+                    <input type="date" id="targetDate">
+                </div>
+            </div>
+            <button class="btn btn-success" onclick="addGoal()">Create Goal</button>
+        </div>
+
+        <!-- Goals Grid -->
+        <div id="goalsContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
+            <!-- Goals will be displayed here -->
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+    <script>
+        checkAuth();
+        updateNavbar();
+
+        async function loadGoals() {
+            try {
+                const data = await ApiClient.getSavingsGoals();
+                displayGoals(data);
+            } catch (error) {
+                showAlert('Failed to load goals: ' + error.message, 'danger');
+            }
+        }
+
+        function displayGoals(goals) {
+            const container = document.getElementById('goalsContainer');
+            if (goals.length === 0) {
+                container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #999; padding: 40px;">No savings goals yet</div>';
+            } else {
+                container.innerHTML = goals.map(goal => {
+                    const progress = Math.min(100, (goal.savedAmount / goal.targetAmount) * 100);
+                    return `
+                        <div class="card">
+                            <h5>${goal.name}</h5>
+                            <p style="color: #666;">Target: ${formatCurrency(goal.targetAmount)}</p>
+                            <div style="margin-bottom: 10px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                    <span>Saved: ${formatCurrency(goal.savedAmount)}</span>
+                                    <span style="color: #666;">${progress.toFixed(0)}%</span>
+                                </div>
+                                <div style="background: #e9ecef; border-radius: 4px; height: 20px; overflow: hidden;">
+                                    <div style="background: #28a745; height: 100%; width: ${progress}%;"></div>
+                                </div>
+                            </div>
+                            <p style="color: #999; font-size: 0.9rem;">Remaining: ${formatCurrency(goal.remainingAmount)}</p>
+                            ${goal.targetDate ? `<p style="color: #999; font-size: 0.9rem;">Target Date: ${formatDate(goal.targetDate)}</p>` : ''}
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-success" onclick="contributeGoal(${goal.id})">Add Money</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteGoal(${goal.id})">Delete</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        async function addGoal() {
+            const name = document.getElementById('goalName').value.trim();
+            const amount = document.getElementById('targetAmount').value.trim();
+            const date = document.getElementById('targetDate').value;
+
+            if (!name || !amount) {
+                showAlert('Please fill in required fields', 'warning');
+                return;
+            }
+
+            try {
+                await ApiClient.createSavingsGoal(name, amount, date);
+                showAlert('Goal created successfully!', 'success');
+                document.getElementById('goalName').value = '';
+                document.getElementById('targetAmount').value = '';
+                document.getElementById('targetDate').value = '';
+                loadGoals();
+            } catch (error) {
+                showAlert('Failed to create goal: ' + error.message, 'danger');
+            }
+        }
+
+        async function contributeGoal(id) {
+            const amount = prompt('How much do you want to contribute?');
+            if (!amount || isNaN(amount) || amount <= 0) return;
+
+            try {
+                await ApiClient.contributeSavingsGoal(id, amount);
+                showAlert('Contribution added!', 'success');
+                loadGoals();
+            } catch (error) {
+                showAlert('Failed to contribute: ' + error.message, 'danger');
+            }
+        }
+
+        async function deleteGoal(id) {
+            if (!confirm('Delete this goal?')) return;
+            try {
+                await ApiClient.deleteSavingsGoal(id);
+                showAlert('Goal deleted!', 'success');
+                loadGoals();
+            } catch (error) {
+                showAlert('Failed to delete goal: ' + error.message, 'danger');
+            }
+        }
+
+        loadGoals();
+    </script>
+</body>
+</html>

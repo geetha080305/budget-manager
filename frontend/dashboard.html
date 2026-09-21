@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Expense Manager</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav></nav>
+    
+    <div class="container-fluid">
+        <h1 style="margin-bottom: 20px;">Dashboard</h1>
+        
+        <!-- Month/Year selector -->
+        <div class="form-container" style="max-width: 300px;">
+            <div style="display: flex; gap: 10px;">
+                <input type="number" id="dashYear" min="2020" max="2030" style="flex: 1;">
+                <select id="dashMonth" style="flex: 1;">
+                    <option value="1">January</option>
+                    <option value="2">February</option>
+                    <option value="3">March</option>
+                    <option value="4">April</option>
+                    <option value="5">May</option>
+                    <option value="6">June</option>
+                    <option value="7">July</option>
+                    <option value="8">August</option>
+                    <option value="9">September</option>
+                    <option value="10">October</option>
+                    <option value="11">November</option>
+                    <option value="12">December</option>
+                </select>
+                <button class="btn btn-primary" onclick="loadDashboard()">Load</button>
+            </div>
+        </div>
+
+        <!-- Stats cards -->
+        <div class="row" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+            <div class="stats-card income">
+                <h5>Total Income</h5>
+                <div class="amount" id="totalIncome">₹0</div>
+            </div>
+            <div class="stats-card expense">
+                <h5>Total Expenses</h5>
+                <div class="amount" id="totalExpense">₹0</div>
+            </div>
+            <div class="stats-card balance">
+                <h5>Balance</h5>
+                <div class="amount" id="balance">₹0</div>
+            </div>
+            <div class="stats-card">
+                <h5>Total Savings</h5>
+                <div class="amount" id="totalSavings">₹0</div>
+            </div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="table-container">
+            <h5>Recent Transactions</h5>
+            <table id="transactionsTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="transactionsBody">
+                    <tr><td colspan="4" style="text-align: center; color: #999;">No transactions</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Budget Status -->
+        <div class="table-container">
+            <h5>Budget Status</h5>
+            <table id="budgetTable">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Budget</th>
+                        <th>Spent</th>
+                        <th>Remaining</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="budgetBody">
+                    <tr><td colspan="5" style="text-align: center; color: #999;">No budgets set</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Category Breakdown -->
+        <div class="table-container">
+            <h5>Expense by Category</h5>
+            <table id="categoryTable">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="categoryBody">
+                    <tr><td colspan="2" style="text-align: center; color: #999;">No expenses</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+    <script>
+        checkAuth();
+        updateNavbar();
+
+        async function loadDashboard() {
+            const year = parseInt(document.getElementById('dashYear').value);
+            const month = parseInt(document.getElementById('dashMonth').value);
+
+            try {
+                const data = await ApiClient.getDashboard(year, month);
+                
+                // Update stats
+                document.getElementById('totalIncome').textContent = formatCurrency(data.totalIncome);
+                document.getElementById('totalExpense').textContent = formatCurrency(data.totalExpense);
+                document.getElementById('balance').textContent = formatCurrency(data.balance);
+                document.getElementById('totalSavings').textContent = formatCurrency(data.totalSavings);
+
+                // Recent transactions
+                const tbody = document.getElementById('transactionsBody');
+                if (data.recentTransactions.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999;">No transactions</td></tr>';
+                } else {
+                    tbody.innerHTML = data.recentTransactions.map(t => `
+                        <tr>
+                            <td>${formatDate(t.date)}</td>
+                            <td><span class="badge ${t.type === 'INCOME' ? 'badge-success' : 'badge-danger'}">${t.type}</span></td>
+                            <td>${t.label}</td>
+                            <td>${formatCurrency(t.amount)}</td>
+                        </tr>
+                    `).join('');
+                }
+
+                // Budget status
+                const budgetBody = document.getElementById('budgetBody');
+                if (data.budgetStatus.length === 0) {
+                    budgetBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">No budgets set</td></tr>';
+                } else {
+                    budgetBody.innerHTML = data.budgetStatus.map(b => `
+                        <tr>
+                            <td>${b.category || 'Overall'}</td>
+                            <td>${formatCurrency(b.amount)}</td>
+                            <td>${formatCurrency(b.spent)}</td>
+                            <td>${formatCurrency(b.remaining)}</td>
+                            <td>
+                                <span class="badge ${b.exceeded ? 'badge-danger' : 'badge-success'}">
+                                    ${b.exceeded ? 'Exceeded' : 'On Track'}
+                                </span>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+
+                // Category breakdown
+                const categoryBody = document.getElementById('categoryBody');
+                if (data.expenseByCategory.length === 0) {
+                    categoryBody.innerHTML = '<tr><td colspan="2" style="text-align: center; color: #999;">No expenses</td></tr>';
+                } else {
+                    categoryBody.innerHTML = data.expenseByCategory.map(c => `
+                        <tr>
+                            <td>${c.category}</td>
+                            <td>${formatCurrency(c.total)}</td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                showAlert('Failed to load dashboard: ' + error.message, 'danger');
+            }
+        }
+
+        // Load on page load
+        const now = new Date();
+        document.getElementById('dashYear').value = now.getFullYear();
+        document.getElementById('dashMonth').value = now.getMonth() + 1;
+        loadDashboard();
+    </script>
+</body>
+</html>
