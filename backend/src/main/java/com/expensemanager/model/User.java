@@ -44,6 +44,10 @@ public class User implements UserDetails {
     @Column(name = "full_name", length = 100)
     private String fullName;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "household_id")
+    private Household household;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

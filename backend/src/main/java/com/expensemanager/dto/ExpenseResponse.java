@@ -13,7 +13,9 @@ public record ExpenseResponse(
         PaymentMethod paymentMethod,
         LocalDate date,
         String description,
-        BudgetAlert budgetAlert
+        BudgetAlert budgetAlert,
+        String paidByUsername,
+        String paidByName
 ) {
     /**
      * Null when no budget is configured for this expense's category+month

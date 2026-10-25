@@ -314,6 +314,31 @@ class ApiClient {
     static getMonthlyComparison(months = 6) {
         return this.request(`/reports/monthly-comparison?months=${months}`);
     }
+
+    // Household endpoints
+    static getHousehold() {
+        return this.request('/household');
+    }
+
+    static createHousehold(name) {
+        return this.request('/household', {
+            method: 'POST',
+            body: JSON.stringify({ name })
+        });
+    }
+
+    static joinHousehold(inviteCode) {
+        return this.request('/household/join', {
+            method: 'POST',
+            body: JSON.stringify({ inviteCode })
+        });
+    }
+
+    static leaveHousehold() {
+        return this.request('/household/leave', {
+            method: 'POST'
+        });
+    }
 }
 
 // Utility functions
@@ -355,19 +380,32 @@ function checkAuth() {
     }
 }
 
-function updateNavbar() {
+async function updateNavbar() {
     const navbar = document.querySelector('nav');
     if (AuthService.isLoggedIn()) {
         const username = AuthService.getUsername();
+        let householdBadge = '';
+        try {
+            const hh = await ApiClient.getHousehold();
+            if (hh && hh.name) {
+                householdBadge = `<span class="badge bg-success ms-2" title="Household: ${hh.name} (Code: ${hh.inviteCode})">🏡 ${hh.name}</span>`;
+            }
+        } catch (e) {
+            // Ignore if household fetch fails
+        }
+
         navbar.innerHTML = `
             <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
                 <div class="container-fluid">
-                    <a class="navbar-brand" href="dashboard.html">💰 Expense Manager</a>
+                    <a class="navbar-brand d-flex align-items-center" href="dashboard.html">
+                        <span>💰 Expense Manager</span>
+                        ${householdBadge}
+                    </a>
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                         <span class="navbar-toggler-icon"></span>
                     </button>
                     <div class="collapse navbar-collapse" id="navbarNav">
-                        <ul class="navbar-nav ms-auto">
+                        <ul class="navbar-nav ms-auto align-items-center">
                             <li class="nav-item"><a class="nav-link" href="dashboard.html">Dashboard</a></li>
                             <li class="nav-item"><a class="nav-link" href="income.html">Income</a></li>
                             <li class="nav-item"><a class="nav-link" href="expenses.html">Expenses</a></li>
@@ -377,16 +415,155 @@ function updateNavbar() {
                             <li class="nav-item"><a class="nav-link" href="reports.html">Reports</a></li>
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                                    ${username}
+                                    👤 ${username}
                                 </a>
-                                <ul class="dropdown-menu" aria-labelledby="userDropdown">
-                                    <li><a class="dropdown-item" href="#" onclick="AuthService.logout()">Logout</a></li>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                    <li><a class="dropdown-item" href="#" onclick="openHouseholdModal()">🏡 Family / Household Settings</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="#" onclick="AuthService.logout()">Logout</a></li>
                                 </ul>
                             </li>
                         </ul>
                     </div>
                 </div>
             </nav>
+
+            <!-- Household Modal -->
+            <div id="householdModal" class="modal fade" tabindex="-1" style="display: none;">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">🏡 Family / Household Account</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="closeHouseholdModal()"></button>
+                        </div>
+                        <div class="modal-body" id="householdModalBody">
+                            <p class="text-muted">Loading household details...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         `;
+    }
+}
+
+async function openHouseholdModal() {
+    let modalEl = document.getElementById('householdModal');
+    if (!modalEl) return;
+    const body = document.getElementById('householdModalBody');
+    body.innerHTML = `<div class="text-center py-3"><div class="spinner-border text-primary" role="status"></div></div>`;
+    modalEl.style.display = 'block';
+    modalEl.classList.add('show');
+    document.body.classList.add('modal-open');
+
+    try {
+        const hh = await ApiClient.getHousehold();
+        if (hh && hh.name) {
+            const memberList = hh.members.map(m => `
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${m.fullName || m.username}</strong>
+                        <div class="small text-muted">@${m.username}</div>
+                    </div>
+                    <span class="badge bg-primary rounded-pill">Member</span>
+                </li>
+            `).join('');
+
+            body.innerHTML = `
+                <div class="mb-3">
+                    <label class="form-label text-muted small">HOUSEHOLD NAME</label>
+                    <h4 class="text-primary">${hh.name}</h4>
+                </div>
+                <div class="alert alert-info">
+                    <strong>Invite Code:</strong> <code style="font-size: 1.2rem; font-weight: bold; letter-spacing: 2px;">${hh.inviteCode}</code>
+                    <button class="btn btn-sm btn-outline-secondary ms-2" onclick="navigator.clipboard.writeText('${hh.inviteCode}'); alert('Invite code copied!');">Copy</button>
+                    <div class="small mt-1 text-muted">Share this code with your spouse or family members so they can join this household!</div>
+                </div>
+                <h6>Members (${hh.members.length})</h6>
+                <ul class="list-group mb-3">
+                    ${memberList}
+                </ul>
+                <button class="btn btn-outline-danger btn-sm w-100" onclick="handleLeaveHousehold()">Leave Household</button>
+            `;
+        } else {
+            body.innerHTML = `
+                <p class="text-muted">You are currently using an individual account. You can create a Family Household or join an existing one using an invite code.</p>
+                
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h6>Create Family / Household</h6>
+                        <div class="input-group mb-2">
+                            <input type="text" id="createHhName" class="form-control" placeholder="e.g. My Family">
+                            <button class="btn btn-success" onclick="handleCreateHousehold()">Create</button>
+                        </div>
+                        <small class="text-muted">Creates a shared workspace for your family.</small>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <h6>Join Existing Household</h6>
+                        <div class="input-group mb-2">
+                            <input type="text" id="joinHhCode" class="form-control" placeholder="Enter 8-digit invite code">
+                            <button class="btn btn-primary" onclick="handleJoinHousehold()">Join</button>
+                        </div>
+                        <small class="text-muted">Ask your family member for their household invite code.</small>
+                    </div>
+                </div>
+            `;
+        }
+    } catch (err) {
+        body.innerHTML = `<div class="alert alert-danger">Error loading household: ${err.message}</div>`;
+    }
+}
+
+function closeHouseholdModal() {
+    const modalEl = document.getElementById('householdModal');
+    if (modalEl) {
+        modalEl.style.display = 'none';
+        modalEl.classList.remove('show');
+        document.body.classList.remove('modal-open');
+    }
+}
+
+async function handleCreateHousehold() {
+    const name = document.getElementById('createHhName')?.value?.trim();
+    if (!name) {
+        alert('Please enter a household name');
+        return;
+    }
+    try {
+        await ApiClient.createHousehold(name);
+        alert('Household created successfully!');
+        window.location.reload();
+    } catch (err) {
+        alert('Failed to create household: ' + err.message);
+    }
+}
+
+async function handleJoinHousehold() {
+    const code = document.getElementById('joinHhCode')?.value?.trim();
+    if (!code) {
+        alert('Please enter an invite code');
+        return;
+    }
+    try {
+        await ApiClient.joinHousehold(code);
+        alert('Joined household successfully!');
+        window.location.reload();
+    } catch (err) {
+        alert('Failed to join household: ' + err.message);
+    }
+}
+
+async function handleLeaveHousehold() {
+    if (!confirm('Are you sure you want to leave this household? You will return to an individual dashboard.')) {
+        return;
+    }
+    try {
+        await ApiClient.leaveHousehold();
+        alert('Left household.');
+        window.location.reload();
+    } catch (err) {
+        alert('Failed to leave household: ' + err.message);
     }
 }

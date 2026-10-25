@@ -8,5 +8,7 @@ public record IncomeResponse(
         String source,
         BigDecimal amount,
         LocalDate date,
-        String description
+        String description,
+        String addedByUsername,
+        String addedByName
 ) {}

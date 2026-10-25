@@ -57,11 +57,12 @@
                         <th>Source</th>
                         <th>Amount</th>
                         <th>Description</th>
+                        <th>Added By</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="incomeBody">
-                    <tr><td colspan="5" style="text-align: center; color: #999;">No income records</td></tr>
+                    <tr><td colspan="6" style="text-align: center; color: #999;">No income records</td></tr>
                 </tbody>
             </table>
         </div>
@@ -129,7 +130,7 @@
         function displayIncome(incomes) {
             const tbody = document.getElementById('incomeBody');
             if (incomes.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">No income records</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">No income records</td></tr>';
             } else {
                 tbody.innerHTML = incomes.map(income => `
                     <tr>
@@ -137,6 +138,7 @@
                         <td>${income.source}</td>
                         <td>${formatCurrency(income.amount)}</td>
                         <td>${income.description || '-'}</td>
+                        <td><span class="badge bg-light text-dark border">👤 ${income.addedByName || income.addedByUsername || '-'}</span></td>
                         <td>
                             <button class="btn btn-sm btn-primary" onclick="editIncome(${income.id})">Edit</button>
                             <button class="btn btn-sm btn-danger" onclick="deleteIncome(${income.id})">Delete</button>

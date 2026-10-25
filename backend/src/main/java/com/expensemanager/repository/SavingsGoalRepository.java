@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface SavingsGoalRepository extends JpaRepository<SavingsGoal, Long> {
     List<SavingsGoal> findByUserIdOrderByIdDesc(Long userId);
+    List<SavingsGoal> findByUserIdInOrderByIdDesc(List<Long> userIds);
 }

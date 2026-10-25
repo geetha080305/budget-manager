@@ -24,6 +24,7 @@ public class BudgetService {
 
     private final BudgetRepository budgetRepository;
     private final ExpenseRepository expenseRepository;
+    private final HouseholdService householdService;
 
     @Transactional
     public BudgetResponse create(User user, BudgetRequest request) {
@@ -47,7 +48,8 @@ public class BudgetService {
     public List<BudgetResponse> list(User user, Integer year, Integer month) {
         int y = year != null ? year : LocalDate.now().getYear();
         int m = month != null ? month : LocalDate.now().getMonthValue();
-        return budgetRepository.findByUserIdAndBudgetYearAndBudgetMonth(user.getId(), y, m)
+        List<Long> userIds = householdService.getEffectiveUserIds(user);
+        return budgetRepository.findByUserIdInAndBudgetYearAndBudgetMonth(userIds, y, m)
                 .stream().map(this::toResponse).toList();
     }
 
@@ -73,7 +75,8 @@ public class BudgetService {
     private Budget findOwned(User user, Long id) {
         Budget budget = budgetRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Budget not found"));
-        if (!budget.getUser().getId().equals(user.getId())) {
+        List<Long> userIds = householdService.getEffectiveUserIds(user);
+        if (!userIds.contains(budget.getUser().getId())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Budget not found");
         }
         return budget;
@@ -84,10 +87,12 @@ public class BudgetService {
         LocalDate start = ym.atDay(1);
         LocalDate end = ym.atEndOfMonth();
 
+        List<Long> userIds = householdService.getEffectiveUserIds(budget.getUser());
+
         BigDecimal spent = budget.getCategory() != null
-                ? expenseRepository.sumByUserIdAndCategoryAndDateBetween(
-                        budget.getUser().getId(), budget.getCategory(), start, end)
-                : expenseRepository.sumByUserIdAndDateBetween(budget.getUser().getId(), start, end);
+                ? expenseRepository.sumByUserIdInAndCategoryAndDateBetween(
+                        userIds, budget.getCategory(), start, end)
+                : expenseRepository.sumByUserIdInAndDateBetween(userIds, start, end);
 
         BigDecimal remaining = budget.getAmount().subtract(spent);
         boolean exceeded = remaining.signum() < 0;

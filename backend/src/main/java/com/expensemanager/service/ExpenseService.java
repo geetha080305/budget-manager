@@ -21,6 +21,7 @@ public class ExpenseService {
 
     private final ExpenseRepository expenseRepository;
     private final BudgetAlertService budgetAlertService;
+    private final HouseholdService householdService;
 
     @Transactional
     public ExpenseResponse create(User user, ExpenseRequest request) {
@@ -37,16 +38,15 @@ public class ExpenseService {
     }
 
     public List<ExpenseResponse> list(User user, LocalDate start, LocalDate end, ExpenseCategory category) {
+        List<Long> userIds = householdService.getEffectiveUserIds(user);
         List<Expense> results;
         if (category != null) {
-            results = expenseRepository.findByUserIdAndCategoryOrderByDateDesc(user.getId(), category);
+            results = expenseRepository.findByUserIdInAndCategoryOrderByDateDesc(userIds, category);
         } else if (start != null && end != null) {
-            results = expenseRepository.findByUserIdAndDateBetweenOrderByDateDesc(user.getId(), start, end);
+            results = expenseRepository.findByUserIdInAndDateBetweenOrderByDateDesc(userIds, start, end);
         } else {
-            results = expenseRepository.findByUserIdOrderByDateDesc(user.getId());
+            results = expenseRepository.findByUserIdInOrderByDateDesc(userIds);
         }
-        // Note: list views don't compute per-row budget alerts (would be N+2 queries per page);
-        // the alert is returned on create/update, and the dashboard endpoint covers the summary view.
         return results.stream().map(this::toResponseWithoutAlert).toList();
     }
 
@@ -74,15 +74,17 @@ public class ExpenseService {
     private Expense findOwned(User user, Long id) {
         Expense expense = expenseRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense not found"));
-        if (!expense.getUser().getId().equals(user.getId())) {
+        List<Long> userIds = householdService.getEffectiveUserIds(user);
+        if (!userIds.contains(expense.getUser().getId())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense not found");
         }
         return expense;
     }
 
     private ExpenseResponse toResponse(Expense expense) {
+        List<Long> userIds = householdService.getEffectiveUserIds(expense.getUser());
         var alert = budgetAlertService.computeAlert(
-                expense.getUser().getId(), expense.getCategory(), expense.getDate());
+                userIds, expense.getCategory(), expense.getDate());
         return build(expense, alert);
     }
 
@@ -91,8 +93,12 @@ public class ExpenseService {
     }
 
     private ExpenseResponse build(Expense expense, ExpenseResponse.BudgetAlert alert) {
+        User u = expense.getUser();
+        String username = u != null ? u.getUsername() : null;
+        String fullName = u != null && u.getFullName() != null && !u.getFullName().isBlank() ? u.getFullName() : username;
         return new ExpenseResponse(
                 expense.getId(), expense.getCategory(), expense.getAmount(),
-                expense.getPaymentMethod(), expense.getDate(), expense.getDescription(), alert);
+                expense.getPaymentMethod(), expense.getDate(), expense.getDescription(), alert,
+                username, fullName);
     }
 }

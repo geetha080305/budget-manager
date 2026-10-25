@@ -11,16 +11,18 @@ public interface IncomeRepository extends JpaRepository<Income, Long> {
 
     List<Income> findByUserIdOrderByDateDesc(Long userId);
 
-    List<Income> findByUserIdAndDateBetweenOrderByDateDesc(
-            Long userId, LocalDate start, LocalDate end);
+    List<Income> findByUserIdInOrderByDateDesc(List<Long> userIds);
 
-    List<Income> findTop5ByUserIdOrderByDateDesc(Long userId);
+    List<Income> findByUserIdInAndDateBetweenOrderByDateDesc(
+            List<Long> userIds, LocalDate start, LocalDate end);
+
+    List<Income> findTop5ByUserIdInOrderByDateDesc(List<Long> userIds);
 
     @org.springframework.data.jpa.repository.Query(
             "SELECT COALESCE(SUM(i.amount), 0) FROM Income i " +
-            "WHERE i.user.id = :userId AND i.date BETWEEN :start AND :end")
-    BigDecimal sumByUserIdAndDateBetween(
-            @org.springframework.data.repository.query.Param("userId") Long userId,
+            "WHERE i.user.id IN :userIds AND i.date BETWEEN :start AND :end")
+    BigDecimal sumByUserIdInAndDateBetween(
+            @org.springframework.data.repository.query.Param("userIds") List<Long> userIds,
             @org.springframework.data.repository.query.Param("start") LocalDate start,
             @org.springframework.data.repository.query.Param("end") LocalDate end);
 }

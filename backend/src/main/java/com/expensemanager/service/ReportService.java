@@ -29,13 +29,14 @@ public class ReportService {
 
     private final IncomeRepository incomeRepository;
     private final ExpenseRepository expenseRepository;
+    private final HouseholdService householdService;
 
     // ----- 4.7 Daily report -----
 
     public DailyReportResponse getDaily(User user, LocalDate date) {
-        Long userId = user.getId();
-        List<Income> incomes = incomeRepository.findByUserIdAndDateBetweenOrderByDateDesc(userId, date, date);
-        List<Expense> expenses = expenseRepository.findByUserIdAndDateBetweenOrderByDateDesc(userId, date, date);
+        List<Long> userIds = householdService.getEffectiveUserIds(user);
+        List<Income> incomes = incomeRepository.findByUserIdInAndDateBetweenOrderByDateDesc(userIds, date, date);
+        List<Expense> expenses = expenseRepository.findByUserIdInAndDateBetweenOrderByDateDesc(userIds, date, date);
 
         BigDecimal totalIncome = sum(incomes, Income::getAmount);
         BigDecimal totalExpense = sum(expenses, Expense::getAmount);
@@ -65,16 +66,16 @@ public class ReportService {
         YearMonth ym = YearMonth.of(year, month);
         LocalDate start = ym.atDay(1);
         LocalDate end = ym.atEndOfMonth();
-        Long userId = user.getId();
+        List<Long> userIds = householdService.getEffectiveUserIds(user);
 
-        BigDecimal totalIncome = incomeRepository.sumByUserIdAndDateBetween(userId, start, end);
-        BigDecimal totalExpense = expenseRepository.sumByUserIdAndDateBetween(userId, start, end);
+        BigDecimal totalIncome = incomeRepository.sumByUserIdInAndDateBetween(userIds, start, end);
+        BigDecimal totalExpense = expenseRepository.sumByUserIdInAndDateBetween(userIds, start, end);
         BigDecimal balance = totalIncome.subtract(totalExpense);
 
         List<DailyTotal> dailyTotals = buildDailyTotals(user, start, end);
 
         List<ExpenseRepository.CategoryTotal> grouped =
-                expenseRepository.sumGroupedByCategory(userId, start, end);
+                expenseRepository.sumGroupedByCategory(userIds, start, end);
         List<CategoryBreakdown> categoryBreakdown = grouped.stream()
                 .map(ct -> new CategoryBreakdown(ct.getCategory(), ct.getTotal()))
                 .toList();
@@ -85,8 +86,9 @@ public class ReportService {
     // ----- 4.7 Category-wise expense analysis -----
 
     public CategoryAnalysisResponse getCategoryAnalysis(User user, LocalDate start, LocalDate end) {
+        List<Long> userIds = householdService.getEffectiveUserIds(user);
         List<ExpenseRepository.CategoryTotal> grouped =
-                expenseRepository.sumGroupedByCategory(user.getId(), start, end);
+                expenseRepository.sumGroupedByCategory(userIds, start, end);
 
         BigDecimal total = grouped.stream()
                 .map(ExpenseRepository.CategoryTotal::getTotal)
@@ -94,9 +96,9 @@ public class ReportService {
 
         List<CategoryShare> shares = grouped.stream()
                 .map(ct -> new CategoryShare(
-                        ct.getCategory(),
-                        ct.getTotal(),
-                        percentageOf(ct.getTotal(), total)))
+                    ct.getCategory(),
+                    ct.getTotal(),
+                    percentageOf(ct.getTotal(), total)))
                 .sorted(Comparator.comparing(CategoryShare::total).reversed())
                 .toList();
 
@@ -106,8 +108,9 @@ public class ReportService {
     // ----- 4.7 Income vs expense analysis -----
 
     public IncomeVsExpenseResponse getIncomeVsExpense(User user, LocalDate start, LocalDate end) {
-        BigDecimal totalIncome = incomeRepository.sumByUserIdAndDateBetween(user.getId(), start, end);
-        BigDecimal totalExpense = expenseRepository.sumByUserIdAndDateBetween(user.getId(), start, end);
+        List<Long> userIds = householdService.getEffectiveUserIds(user);
+        BigDecimal totalIncome = incomeRepository.sumByUserIdInAndDateBetween(userIds, start, end);
+        BigDecimal totalExpense = expenseRepository.sumByUserIdInAndDateBetween(userIds, start, end);
         BigDecimal balance = totalIncome.subtract(totalExpense);
 
         Double savingsRate = totalIncome.signum() == 0
@@ -122,13 +125,8 @@ public class ReportService {
 
     // ----- 4.7/5.3 Monthly comparison & spending trend -----
 
-    /**
-     * Last `months` months (inclusive of the current one), oldest first -
-     * feeds both "monthly spending comparison" (5.3) and "spending trends" (4.7)
-     * since a trend is just this same series charted over time.
-     */
     public List<MonthlyComparisonEntry> getMonthlyComparison(User user, int months) {
-        Long userId = user.getId();
+        List<Long> userIds = householdService.getEffectiveUserIds(user);
         YearMonth current = YearMonth.now();
         List<MonthlyComparisonEntry> result = new ArrayList<>();
 
@@ -136,8 +134,8 @@ public class ReportService {
             YearMonth ym = current.minusMonths(i);
             LocalDate start = ym.atDay(1);
             LocalDate end = ym.atEndOfMonth();
-            BigDecimal totalIncome = incomeRepository.sumByUserIdAndDateBetween(userId, start, end);
-            BigDecimal totalExpense = expenseRepository.sumByUserIdAndDateBetween(userId, start, end);
+            BigDecimal totalIncome = incomeRepository.sumByUserIdInAndDateBetween(userIds, start, end);
+            BigDecimal totalExpense = expenseRepository.sumByUserIdInAndDateBetween(userIds, start, end);
             result.add(new MonthlyComparisonEntry(
                     ym.getYear(), ym.getMonthValue(), totalIncome, totalExpense,
                     totalIncome.subtract(totalExpense)));
@@ -160,14 +158,14 @@ public class ReportService {
 
     // Zero-fills every day in [start, end] so charts don't have gaps on days with no activity.
     private List<DailyTotal> buildDailyTotals(User user, LocalDate start, LocalDate end) {
-        Long userId = user.getId();
+        List<Long> userIds = householdService.getEffectiveUserIds(user);
         Map<LocalDate, BigDecimal> incomeByDate = incomeRepository
-                .findByUserIdAndDateBetweenOrderByDateDesc(userId, start, end).stream()
+                .findByUserIdInAndDateBetweenOrderByDateDesc(userIds, start, end).stream()
                 .collect(Collectors.groupingBy(Income::getDate,
                         Collectors.reducing(BigDecimal.ZERO, Income::getAmount, BigDecimal::add)));
 
         Map<LocalDate, BigDecimal> expenseByDate = expenseRepository
-                .findByUserIdAndDateBetweenOrderByDateDesc(userId, start, end).stream()
+                .findByUserIdInAndDateBetweenOrderByDateDesc(userIds, start, end).stream()
                 .collect(Collectors.groupingBy(Expense::getDate,
                         Collectors.reducing(BigDecimal.ZERO, Expense::getAmount, BigDecimal::add)));
 
@@ -194,12 +192,18 @@ public class ReportService {
     }
 
     private TransactionSummary toSummary(Income income) {
+        User u = income.getUser();
+        String username = u != null ? u.getUsername() : null;
+        String fullName = u != null && u.getFullName() != null && !u.getFullName().isBlank() ? u.getFullName() : username;
         return new TransactionSummary("INCOME", income.getId(), income.getSource(),
-                income.getAmount(), income.getDate());
+                income.getAmount(), income.getDate(), username, fullName);
     }
 
     private TransactionSummary toSummary(Expense expense) {
+        User u = expense.getUser();
+        String username = u != null ? u.getUsername() : null;
+        String fullName = u != null && u.getFullName() != null && !u.getFullName().isBlank() ? u.getFullName() : username;
         return new TransactionSummary("EXPENSE", expense.getId(), expense.getCategory().name(),
-                expense.getAmount(), expense.getDate());
+                expense.getAmount(), expense.getDate(), username, fullName);
     }
 }

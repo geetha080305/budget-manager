@@ -25,6 +25,7 @@ public class SavingsGoalService {
 
     private final SavingsGoalRepository savingsGoalRepository;
     private final ExpenseRepository expenseRepository;
+    private final HouseholdService householdService;
 
     @Transactional
     public SavingsGoalResponse create(User user, SavingsGoalRequest request) {
@@ -38,7 +39,8 @@ public class SavingsGoalService {
     }
 
     public List<SavingsGoalResponse> list(User user) {
-        return savingsGoalRepository.findByUserIdOrderByIdDesc(user.getId())
+        List<Long> userIds = householdService.getEffectiveUserIds(user);
+        return savingsGoalRepository.findByUserIdInOrderByIdDesc(userIds)
                 .stream().map(this::toResponse).toList();
     }
 
@@ -85,7 +87,8 @@ public class SavingsGoalService {
     private SavingsGoal findOwned(User user, Long id) {
         SavingsGoal goal = savingsGoalRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Savings goal not found"));
-        if (!goal.getUser().getId().equals(user.getId())) {
+        List<Long> userIds = householdService.getEffectiveUserIds(user);
+        if (!userIds.contains(goal.getUser().getId())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Savings goal not found");
         }
         return goal;

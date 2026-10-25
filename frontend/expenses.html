@@ -92,11 +92,12 @@
                         <th>Amount</th>
                         <th>Method</th>
                         <th>Description</th>
+                        <th>Paid By</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="expenseBody">
-                    <tr><td colspan="6" style="text-align: center; color: #999;">No expense records</td></tr>
+                    <tr><td colspan="7" style="text-align: center; color: #999;">No expense records</td></tr>
                 </tbody>
             </table>
         </div>
@@ -187,7 +188,7 @@
         function displayExpenses(expenses) {
             const tbody = document.getElementById('expenseBody');
             if (expenses.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">No expense records</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999;">No expense records</td></tr>';
             } else {
                 tbody.innerHTML = expenses.map(exp => `
                     <tr>
@@ -196,6 +197,7 @@
                         <td>${formatCurrency(exp.amount)}</td>
                         <td>${exp.paymentMethod}</td>
                         <td>${exp.description || '-'}</td>
+                        <td><span class="badge bg-light text-dark border">👤 ${exp.paidByName || exp.paidByUsername || '-'}</span></td>
                         <td>
                             <button class="btn btn-sm btn-primary" onclick="editExpense(${exp.id})">Edit</button>
                             <button class="btn btn-sm btn-danger" onclick="deleteExpense(${exp.id})">Delete</button>

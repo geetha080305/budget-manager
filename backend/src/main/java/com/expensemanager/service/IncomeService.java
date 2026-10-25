@@ -19,6 +19,7 @@ import java.util.List;
 public class IncomeService {
 
     private final IncomeRepository incomeRepository;
+    private final HouseholdService householdService;
 
     @Transactional
     public IncomeResponse create(User user, IncomeRequest request) {
@@ -33,9 +34,10 @@ public class IncomeService {
     }
 
     public List<IncomeResponse> list(User user, LocalDate start, LocalDate end) {
+        List<Long> userIds = householdService.getEffectiveUserIds(user);
         List<Income> results = (start != null && end != null)
-                ? incomeRepository.findByUserIdAndDateBetweenOrderByDateDesc(user.getId(), start, end)
-                : incomeRepository.findByUserIdOrderByDateDesc(user.getId());
+                ? incomeRepository.findByUserIdInAndDateBetweenOrderByDateDesc(userIds, start, end)
+                : incomeRepository.findByUserIdInOrderByDateDesc(userIds);
         return results.stream().map(this::toResponse).toList();
     }
 
@@ -50,7 +52,7 @@ public class IncomeService {
         income.setAmount(request.amount());
         income.setDate(request.date());
         income.setDescription(request.description());
-        return toResponse(income); // managed entity - Hibernate flushes changes on commit, no explicit save() needed
+        return toResponse(income);
     }
 
     @Transactional
@@ -62,16 +64,20 @@ public class IncomeService {
     private Income findOwned(User user, Long id) {
         Income income = incomeRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Income record not found"));
-        // 404 (not 403) on someone else's record - don't reveal that the ID exists at all.
-        if (!income.getUser().getId().equals(user.getId())) {
+        List<Long> userIds = householdService.getEffectiveUserIds(user);
+        if (!userIds.contains(income.getUser().getId())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Income record not found");
         }
         return income;
     }
 
     private IncomeResponse toResponse(Income income) {
+        User u = income.getUser();
+        String username = u != null ? u.getUsername() : null;
+        String fullName = u != null && u.getFullName() != null && !u.getFullName().isBlank() ? u.getFullName() : username;
         return new IncomeResponse(
                 income.getId(), income.getSource(), income.getAmount(),
-                income.getDate(), income.getDescription());
+                income.getDate(), income.getDescription(),
+                username, fullName);
     }
 }

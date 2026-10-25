@@ -12,10 +12,19 @@ public interface BudgetRepository extends JpaRepository<Budget, Long> {
     List<Budget> findByUserIdAndBudgetYearAndBudgetMonth(
             Long userId, Integer year, Integer month);
 
+    List<Budget> findByUserIdInAndBudgetYearAndBudgetMonth(
+            List<Long> userIds, Integer year, Integer month);
+
     Optional<Budget> findByUserIdAndCategoryAndBudgetYearAndBudgetMonth(
             Long userId, ExpenseCategory category, Integer year, Integer month);
+
+    Optional<Budget> findFirstByUserIdInAndCategoryAndBudgetYearAndBudgetMonth(
+            List<Long> userIds, ExpenseCategory category, Integer year, Integer month);
 
     // Overall monthly budget has category = null.
     Optional<Budget> findByUserIdAndCategoryIsNullAndBudgetYearAndBudgetMonth(
             Long userId, Integer year, Integer month);
+
+    Optional<Budget> findFirstByUserIdInAndCategoryIsNullAndBudgetYearAndBudgetMonth(
+            List<Long> userIds, Integer year, Integer month);
 }

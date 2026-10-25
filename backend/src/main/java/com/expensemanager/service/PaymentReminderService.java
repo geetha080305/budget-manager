@@ -27,6 +27,7 @@ public class PaymentReminderService {
 
     private final PaymentReminderRepository reminderRepository;
     private final ExpenseRepository expenseRepository;
+    private final HouseholdService householdService;
 
     @Transactional
     public PaymentReminderResponse create(User user, PaymentReminderRequest request) {
@@ -41,7 +42,8 @@ public class PaymentReminderService {
     }
 
     public List<PaymentReminderResponse> list(User user) {
-        return reminderRepository.findByUserIdOrderByDueDateAsc(user.getId())
+        List<Long> userIds = householdService.getEffectiveUserIds(user);
+        return reminderRepository.findByUserIdInOrderByDueDateAsc(userIds)
                 .stream().map(this::toResponse).toList();
     }
 
@@ -112,7 +114,8 @@ public class PaymentReminderService {
     private PaymentReminder findOwned(User user, Long id) {
         PaymentReminder reminder = reminderRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment reminder not found"));
-        if (!reminder.getUser().getId().equals(user.getId())) {
+        List<Long> userIds = householdService.getEffectiveUserIds(user);
+        if (!userIds.contains(reminder.getUser().getId())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment reminder not found");
         }
         return reminder;

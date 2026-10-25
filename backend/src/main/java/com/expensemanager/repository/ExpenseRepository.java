@@ -14,36 +14,38 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
     List<Expense> findByUserIdOrderByDateDesc(Long userId);
 
-    List<Expense> findByUserIdAndDateBetweenOrderByDateDesc(
-            Long userId, LocalDate start, LocalDate end);
+    List<Expense> findByUserIdInOrderByDateDesc(List<Long> userIds);
 
-    List<Expense> findByUserIdAndCategoryOrderByDateDesc(
-            Long userId, ExpenseCategory category);
+    List<Expense> findByUserIdInAndDateBetweenOrderByDateDesc(
+            List<Long> userIds, LocalDate start, LocalDate end);
 
-    List<Expense> findTop5ByUserIdOrderByDateDesc(Long userId);
+    List<Expense> findByUserIdInAndCategoryOrderByDateDesc(
+            List<Long> userIds, ExpenseCategory category);
+
+    List<Expense> findTop5ByUserIdInOrderByDateDesc(List<Long> userIds);
 
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e " +
-           "WHERE e.user.id = :userId AND e.date BETWEEN :start AND :end")
-    BigDecimal sumByUserIdAndDateBetween(
-            @Param("userId") Long userId,
+           "WHERE e.user.id IN :userIds AND e.date BETWEEN :start AND :end")
+    BigDecimal sumByUserIdInAndDateBetween(
+            @Param("userIds") List<Long> userIds,
             @Param("start") LocalDate start,
             @Param("end") LocalDate end);
 
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e " +
-           "WHERE e.user.id = :userId AND e.category = :category " +
+           "WHERE e.user.id IN :userIds AND e.category = :category " +
            "AND e.date BETWEEN :start AND :end")
-    BigDecimal sumByUserIdAndCategoryAndDateBetween(
-            @Param("userId") Long userId,
+    BigDecimal sumByUserIdInAndCategoryAndDateBetween(
+            @Param("userIds") List<Long> userIds,
             @Param("category") ExpenseCategory category,
             @Param("start") LocalDate start,
             @Param("end") LocalDate end);
 
     // Powers "highest spending category" on the dashboard.
     @Query("SELECT e.category AS category, COALESCE(SUM(e.amount), 0) AS total " +
-           "FROM Expense e WHERE e.user.id = :userId AND e.date BETWEEN :start AND :end " +
+           "FROM Expense e WHERE e.user.id IN :userIds AND e.date BETWEEN :start AND :end " +
            "GROUP BY e.category ORDER BY total DESC")
     List<CategoryTotal> sumGroupedByCategory(
-            @Param("userId") Long userId,
+            @Param("userIds") List<Long> userIds,
             @Param("start") LocalDate start,
             @Param("end") LocalDate end);
 

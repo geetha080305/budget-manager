@@ -64,11 +64,12 @@
                         <th>Date</th>
                         <th>Type</th>
                         <th>Description</th>
+                        <th>Member</th>
                         <th>Amount</th>
                     </tr>
                 </thead>
                 <tbody id="transactionsBody">
-                    <tr><td colspan="4" style="text-align: center; color: #999;">No transactions</td></tr>
+                    <tr><td colspan="5" style="text-align: center; color: #999;">No transactions</td></tr>
                 </tbody>
             </table>
         </div>
@@ -131,13 +132,14 @@
                 // Recent transactions
                 const tbody = document.getElementById('transactionsBody');
                 if (data.recentTransactions.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999;">No transactions</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">No transactions</td></tr>';
                 } else {
                     tbody.innerHTML = data.recentTransactions.map(t => `
                         <tr>
                             <td>${formatDate(t.date)}</td>
                             <td><span class="badge ${t.type === 'INCOME' ? 'badge-success' : 'badge-danger'}">${t.type}</span></td>
                             <td>${t.label}</td>
+                            <td><span class="badge bg-light text-dark border">👤 ${t.addedByName || t.addedByUsername || '-'}</span></td>
                             <td>${formatCurrency(t.amount)}</td>
                         </tr>
                     `).join('');

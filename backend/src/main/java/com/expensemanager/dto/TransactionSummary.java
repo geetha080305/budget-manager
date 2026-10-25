@@ -8,5 +8,7 @@ public record TransactionSummary(
         Long id,
         String label,  // income source, or expense category name
         BigDecimal amount,
-        LocalDate date
+        LocalDate date,
+        String addedByUsername,
+        String addedByName
 ) {}

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -24,23 +25,23 @@ public class BudgetAlertService {
      * both are configured, since it's the more specific constraint.
      * Returns null when no relevant budget exists at all.
      */
-    public ExpenseResponse.BudgetAlert computeAlert(Long userId, ExpenseCategory category, LocalDate date) {
+    public ExpenseResponse.BudgetAlert computeAlert(List<Long> userIds, ExpenseCategory category, LocalDate date) {
         int year = date.getYear();
         int month = date.getMonthValue();
         YearMonth ym = YearMonth.of(year, month);
         LocalDate start = ym.atDay(1);
         LocalDate end = ym.atEndOfMonth();
 
-        return budgetRepository.findByUserIdAndCategoryAndBudgetYearAndBudgetMonth(userId, category, year, month)
+        return budgetRepository.findFirstByUserIdInAndCategoryAndBudgetYearAndBudgetMonth(userIds, category, year, month)
                 .map(budget -> {
-                    BigDecimal spent = expenseRepository.sumByUserIdAndCategoryAndDateBetween(
-                            userId, category, start, end);
+                    BigDecimal spent = expenseRepository.sumByUserIdInAndCategoryAndDateBetween(
+                            userIds, category, start, end);
                     return toAlert("CATEGORY", budget, spent);
                 })
                 .orElseGet(() -> budgetRepository
-                        .findByUserIdAndCategoryIsNullAndBudgetYearAndBudgetMonth(userId, year, month)
+                        .findFirstByUserIdInAndCategoryIsNullAndBudgetYearAndBudgetMonth(userIds, year, month)
                         .map(budget -> {
-                            BigDecimal spent = expenseRepository.sumByUserIdAndDateBetween(userId, start, end);
+                            BigDecimal spent = expenseRepository.sumByUserIdInAndDateBetween(userIds, start, end);
                             return toAlert("OVERALL", budget, spent);
                         })
                         .orElse(null));
