@@ -1,31 +1,30 @@
-# Stage 1: Build JAR using official open-source Maven + Eclipse Temurin 21
-FROM maven:3.9.9-eclipse-temurin-21-alpine AS build
+# Use official Astral uv image for lightning-fast dependency resolution and installation
+FROM ghcr.io/astral-sh/uv:0.13.5 AS uv_bin
+FROM python:3.15-slim
+
 WORKDIR /app
 
-# Cache dependencies layer
-COPY pom.xml .
-RUN mvn dependency:go-offline -B
+# Install system dependencies if required for compilation
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Build application
-COPY src ./src
-RUN mvn clean package -DskipTests -B
+# Copy uv binary directly from official image
+COPY --from=uv_bin /uv /uvx /bin/
 
-# Stage 2: Lightweight production JRE image (Temurin Alpine)
-FROM eclipse-temurin:21-jre-alpine
-WORKDIR /app
+# Copy project configuration and application code
+COPY pyproject.toml .
+COPY app ./app
 
-# Run as non-root user for container security
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-USER appuser
+# Install project and dependencies via uv
+RUN uv pip install --system --no-cache .
 
-# Copy built jar from builder stage
-COPY --from=build /app/target/*.jar app.jar
-
-# Expose Spring Boot port
+# Expose backend port
 EXPOSE 8080
 
-# Health check using Spring Actuator
-HEALTHCHECK --interval=10s --timeout=5s --start-period=40s --retries=5 \
-  CMD wget --quiet --tries=1 -O - http://localhost:8080/actuator/health | grep -q "UP" || exit 1
+# Health check
+HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=5 \
+    CMD curl -f http://localhost:8080/actuator/health || exit 1
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Start ASGI server via uv
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
