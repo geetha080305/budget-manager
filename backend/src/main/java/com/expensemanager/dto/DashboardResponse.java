@@ -18,4 +18,8 @@ public record DashboardResponse(
         List<BudgetResponse> budgetStatus,
         CategoryBreakdown highestSpendingCategory, // null if no expenses this period
         List<CategoryBreakdown> expenseByCategory
-) {}
+) {
+    public BigDecimal getTotalExpense() {
+        return totalExpenses;
+    }
+}

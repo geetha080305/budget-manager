@@ -3,8 +3,12 @@ package com.expensemanager.service;
 import com.expensemanager.dto.ContributionRequest;
 import com.expensemanager.dto.SavingsGoalRequest;
 import com.expensemanager.dto.SavingsGoalResponse;
+import com.expensemanager.model.Expense;
+import com.expensemanager.model.ExpenseCategory;
+import com.expensemanager.model.PaymentMethod;
 import com.expensemanager.model.SavingsGoal;
 import com.expensemanager.model.User;
+import com.expensemanager.repository.ExpenseRepository;
 import com.expensemanager.repository.SavingsGoalRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -12,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -19,6 +24,7 @@ import java.util.List;
 public class SavingsGoalService {
 
     private final SavingsGoalRepository savingsGoalRepository;
+    private final ExpenseRepository expenseRepository;
 
     @Transactional
     public SavingsGoalResponse create(User user, SavingsGoalRequest request) {
@@ -56,6 +62,18 @@ public class SavingsGoalService {
     public SavingsGoalResponse contribute(User user, Long id, ContributionRequest request) {
         SavingsGoal goal = findOwned(user, id);
         goal.setSavedAmount(goal.getSavedAmount().add(request.amount()));
+
+        // Automatically record this savings contribution in Expenses
+        Expense expense = Expense.builder()
+                .user(user)
+                .category(ExpenseCategory.OTHER)
+                .amount(request.amount())
+                .paymentMethod(PaymentMethod.UPI)
+                .date(LocalDate.now())
+                .description("Savings Goal: " + goal.getName())
+                .build();
+        expenseRepository.save(expense);
+
         return toResponse(goal);
     }
 

@@ -39,11 +39,75 @@
         </div>
     </div>
 
+        <!-- Contribute Modal -->
+        <div class="modal fade" id="contributeModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="contributeModalTitle">Add Money to Goal</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="contributeGoalId">
+                        <input type="hidden" id="contributeGoalName">
+                        <div class="mb-3">
+                            <label for="contributeAmount" class="form-label">Amount (₹)</label>
+                            <input type="number" class="form-control" id="contributeAmount" placeholder="Enter amount" step="0.01" min="1" required>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="recordAsExpense" checked>
+                            <label class="form-check-label" for="recordAsExpense">
+                                Also record this contribution in <strong>Expenses</strong>
+                            </label>
+                        </div>
+                        <div id="expenseOptions" class="mt-2 p-2 bg-light rounded border">
+                            <div class="mb-2">
+                                <label for="expenseCategorySelect" class="form-label small mb-1">Expense Category</label>
+                                <select id="expenseCategorySelect" class="form-select form-select-sm">
+                                    <option value="OTHER" selected>Other (Savings / Investment)</option>
+                                    <option value="SHOPPING">Shopping</option>
+                                    <option value="ENTERTAINMENT">Entertainment</option>
+                                    <option value="FOOD">Food</option>
+                                    <option value="TRANSPORT">Transport</option>
+                                    <option value="RENT">Rent</option>
+                                    <option value="BILLS">Bills</option>
+                                    <option value="HEALTHCARE">Healthcare</option>
+                                    <option value="EDUCATION">Education</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="expensePaymentMethod" class="form-label small mb-1">Payment Method</label>
+                                <select id="expensePaymentMethod" class="form-select form-select-sm">
+                                    <option value="UPI" selected>UPI</option>
+                                    <option value="BANK_TRANSFER">Bank Transfer</option>
+                                    <option value="CASH">Cash</option>
+                                    <option value="CARD">Card</option>
+                                    <option value="OTHER">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-success" onclick="submitContribution()">Add Money</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script src="app.js"></script>
     <script>
         checkAuth();
         updateNavbar();
+
+        let contributeModalInstance = null;
+        document.addEventListener('DOMContentLoaded', () => {
+            contributeModalInstance = new bootstrap.Modal(document.getElementById('contributeModal'));
+            document.getElementById('recordAsExpense').addEventListener('change', function() {
+                document.getElementById('expenseOptions').style.display = this.checked ? 'block' : 'none';
+            });
+        });
 
         async function loadGoals() {
             try {
@@ -61,6 +125,7 @@
             } else {
                 container.innerHTML = goals.map(goal => {
                     const progress = Math.min(100, (goal.savedAmount / goal.targetAmount) * 100);
+                    const escapedName = (goal.name || '').replace(/'/g, "\\'");
                     return `
                         <div class="card">
                             <h5>${goal.name}</h5>
@@ -77,7 +142,7 @@
                             <p style="color: #999; font-size: 0.9rem;">Remaining: ${formatCurrency(goal.remainingAmount)}</p>
                             ${goal.targetDate ? `<p style="color: #999; font-size: 0.9rem;">Target Date: ${formatDate(goal.targetDate)}</p>` : ''}
                             <div class="btn-group">
-                                <button class="btn btn-sm btn-success" onclick="contributeGoal(${goal.id})">Add Money</button>
+                                <button class="btn btn-sm btn-success" onclick="openContributeModal(${goal.id}, '${escapedName}')">Add Money</button>
                                 <button class="btn btn-sm btn-danger" onclick="deleteGoal(${goal.id})">Delete</button>
                             </div>
                         </div>
@@ -108,16 +173,44 @@
             }
         }
 
-        async function contributeGoal(id) {
-            const amount = prompt('How much do you want to contribute?');
-            if (!amount || isNaN(amount) || amount <= 0) return;
+        function openContributeModal(id, name) {
+            document.getElementById('contributeGoalId').value = id;
+            document.getElementById('contributeGoalName').value = name;
+            document.getElementById('contributeModalTitle').textContent = `Add Money to "${name}"`;
+            document.getElementById('contributeAmount').value = '';
+            document.getElementById('recordAsExpense').checked = true;
+            document.getElementById('expenseOptions').style.display = 'block';
+            if (!contributeModalInstance) {
+                contributeModalInstance = new bootstrap.Modal(document.getElementById('contributeModal'));
+            }
+            contributeModalInstance.show();
+        }
+
+        async function submitContribution() {
+            const id = document.getElementById('contributeGoalId').value;
+            const name = document.getElementById('contributeGoalName').value;
+            const amountVal = document.getElementById('contributeAmount').value.trim();
+            const recordAsExpense = document.getElementById('recordAsExpense').checked;
+            const category = document.getElementById('expenseCategorySelect').value;
+            const paymentMethod = document.getElementById('expensePaymentMethod').value;
+
+            const amount = parseFloat(amountVal);
+            if (!amount || isNaN(amount) || amount <= 0) {
+                alert('Please enter a valid amount');
+                return;
+            }
 
             try {
+                // Add money to Savings Goal (Backend automatically records the expense atomically)
                 await ApiClient.contributeSavingsGoal(id, amount);
-                showAlert('Contribution added!', 'success');
+
+                if (contributeModalInstance) {
+                    contributeModalInstance.hide();
+                }
+                showAlert('Contribution added to Savings Goal and recorded in Expenses!', 'success');
                 loadGoals();
             } catch (error) {
-                showAlert('Failed to contribute: ' + error.message, 'danger');
+                showAlert('Failed to process: ' + error.message, 'danger');
             }
         }
 

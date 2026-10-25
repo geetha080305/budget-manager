@@ -276,14 +276,19 @@
             currentEditId = null;
         }
 
+        let deletingExpense = false;
         async function deleteExpense(id) {
+            if (deletingExpense) return;
             if (!confirm('Are you sure you want to delete this expense?')) return;
+            deletingExpense = true;
             try {
                 await ApiClient.deleteExpense(id);
                 showAlert('Expense deleted successfully!', 'success');
-                loadAllExpenses();
+                await loadAllExpenses();
             } catch (error) {
                 showAlert('Failed to delete expense: ' + error.message, 'danger');
+            } finally {
+                deletingExpense = false;
             }
         }
 

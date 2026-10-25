@@ -11,6 +11,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.expensemanager.model.Expense;
+import com.expensemanager.model.ExpenseCategory;
+import com.expensemanager.model.PaymentMethod;
+import com.expensemanager.repository.ExpenseRepository;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -22,6 +26,7 @@ public class PaymentReminderService {
     private static final int DUE_SOON_WINDOW_DAYS = 3;
 
     private final PaymentReminderRepository reminderRepository;
+    private final ExpenseRepository expenseRepository;
 
     @Transactional
     public PaymentReminderResponse create(User user, PaymentReminderRequest request) {
@@ -64,6 +69,25 @@ public class PaymentReminderService {
     public PaymentReminderResponse markPaid(User user, Long id) {
         PaymentReminder reminder = findOwned(user, id);
         reminder.setStatus(PaymentReminder.Status.PAID);
+
+        // Auto-record in Expenses so Total Expenses, Balance, and Recent Transactions update immediately
+        ExpenseCategory category = ExpenseCategory.BILLS;
+        String nameLower = reminder.getBillName().toLowerCase();
+        if (nameLower.contains("rent")) {
+            category = ExpenseCategory.RENT;
+        } else if (nameLower.contains("fee") || nameLower.contains("tuition") || nameLower.contains("course")) {
+            category = ExpenseCategory.EDUCATION;
+        }
+
+        Expense expense = Expense.builder()
+                .user(user)
+                .category(category)
+                .amount(reminder.getAmount())
+                .paymentMethod(PaymentMethod.UPI)
+                .date(LocalDate.now())
+                .description("Bill Paid: " + reminder.getBillName())
+                .build();
+        expenseRepository.save(expense);
 
         if (reminder.isRecurring()) {
             PaymentReminder next = PaymentReminder.builder()

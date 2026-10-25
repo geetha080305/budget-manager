@@ -27,6 +27,10 @@ class AuthService {
         localStorage.setItem('username', username);
     }
 
+    static clearUsername() {
+        localStorage.removeItem('username');
+    }
+
     static isLoggedIn() {
         return !!this.getToken();
     }
@@ -57,14 +61,32 @@ class ApiClient {
             headers
         });
 
-        if (response.status === 401) {
+        if (response.status === 401 && !endpoint.startsWith('/auth/')) {
             AuthService.logout();
             return;
         }
 
-        const data = await response.json();
+        if (response.status === 204 || response.status === 205) {
+            return null;
+        }
+
+        const text = await response.text();
+        let data = null;
+        if (text) {
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                // If the response is HTML (e.g. Cloudflare error, 502 Bad Gateway), extract title or provide clean message
+                if (text.includes('<html') || text.includes('Error 1033') || text.includes('Cloudflare')) {
+                    data = { error: `Server unreachable (HTTP ${response.status}). Please check if the backend is running.` };
+                } else {
+                    data = { error: text };
+                }
+            }
+        }
+
         if (!response.ok) {
-            throw new Error(data.details?.[0] || data.error || 'Request failed');
+            throw new Error(data?.details?.[0] || data?.error || `Request failed with status ${response.status}`);
         }
         return data;
     }
@@ -296,10 +318,11 @@ class ApiClient {
 
 // Utility functions
 function formatCurrency(amount) {
+    const val = Number(amount);
     return new Intl.NumberFormat('en-IN', {
         style: 'currency',
         currency: 'INR'
-    }).format(amount);
+    }).format(isNaN(val) ? 0 : val);
 }
 
 function formatDate(dateStr) {

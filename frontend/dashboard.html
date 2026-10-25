@@ -124,7 +124,7 @@
                 
                 // Update stats
                 document.getElementById('totalIncome').textContent = formatCurrency(data.totalIncome);
-                document.getElementById('totalExpense').textContent = formatCurrency(data.totalExpense);
+                document.getElementById('totalExpense').textContent = formatCurrency(data.totalExpenses ?? data.totalExpense ?? 0);
                 document.getElementById('balance').textContent = formatCurrency(data.balance);
                 document.getElementById('totalSavings').textContent = formatCurrency(data.totalSavings);
 

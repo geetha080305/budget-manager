@@ -19,7 +19,28 @@
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="billName">Bill Name</label>
-                    <input type="text" id="billName" placeholder="e.g., Electricity Bill">
+                    <input type="text" id="billName" list="billSuggestions" placeholder="e.g., Electricity Bill" autocomplete="off" onfocus="this.value=''" onclick="this.showPicker && this.showPicker()">
+                    <datalist id="billSuggestions">
+                        <option value="Electricity Bill">
+                        <option value="Water Bill">
+                        <option value="Wi-Fi / Internet Bill">
+                        <option value="Mobile Recharge">
+                        <option value="House Rent">
+                        <option value="Gas / LPG Cylinder">
+                        <option value="Credit Card Bill">
+                        <option value="DTH / Cable TV">
+                        <option value="Maintenance Fee">
+                        <option value="Insurance Premium">
+                        <option value="Loan / EMI">
+                    </datalist>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
+                        <span class="badge bg-light text-dark border" style="cursor: pointer; font-size: 0.8rem; padding: 4px 8px;" onclick="document.getElementById('billName').value='Electricity Bill'">💡 Electricity</span>
+                        <span class="badge bg-light text-dark border" style="cursor: pointer; font-size: 0.8rem; padding: 4px 8px;" onclick="document.getElementById('billName').value='Water Bill'">💧 Water</span>
+                        <span class="badge bg-light text-dark border" style="cursor: pointer; font-size: 0.8rem; padding: 4px 8px;" onclick="document.getElementById('billName').value='Wi-Fi / Internet Bill'">📶 Wi-Fi</span>
+                        <span class="badge bg-light text-dark border" style="cursor: pointer; font-size: 0.8rem; padding: 4px 8px;" onclick="document.getElementById('billName').value='Mobile Recharge'">📱 Mobile</span>
+                        <span class="badge bg-light text-dark border" style="cursor: pointer; font-size: 0.8rem; padding: 4px 8px;" onclick="document.getElementById('billName').value='House Rent'">🏠 Rent</span>
+                        <span class="badge bg-light text-dark border" style="cursor: pointer; font-size: 0.8rem; padding: 4px 8px;" onclick="document.getElementById('billName').value='Gas / LPG Cylinder'">🔥 Gas</span>
+                    </div>
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="billAmount">Amount</label>
