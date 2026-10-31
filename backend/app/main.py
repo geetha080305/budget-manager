@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
@@ -12,8 +13,15 @@ import app.modules.budgets.models
 import app.modules.savings.models
 import app.modules.reminders.models
 
-# Auto-create any missing tables (safe if already existing)
-Base.metadata.create_all(bind=engine)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Auto-create any missing tables at startup if connection available
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception:
+        # Avoid crashing when running standalone unit tests without live DB
+        pass
+    yield
 
 # Import module routers
 from app.modules.auth.router import router as auth_router
@@ -30,7 +38,8 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     version="2.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # CORS setup
