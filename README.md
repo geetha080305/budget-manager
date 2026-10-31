@@ -1,18 +1,13 @@
 # Expense & Budget Management System
 
-A full-stack Personal Expense & Budget Management web application built with **Java 21, Spring Boot 3, MySQL 8.0, and an interactive Vanilla HTML/CSS/JS frontend served via Nginx**.
+A modern full-stack Personal & Household Expense Management system powered by **Python 3.15 FastAPI**, **uv package manager**, **MySQL 8.0**, and an interactive **responsive web frontend served via Nginx**.
 
 ---
 
 ## 🚀 Quick Start with Docker (Recommended)
 
-Run everything (MySQL, Spring Boot Backend, Nginx Frontend) with a single command — **no local Java, Maven, or MySQL installation required**:
+Run everything (MySQL 8, FastAPI Python 3.15 backend, and Nginx frontend) with a single command — **no local Python or MySQL installation required**:
 
-```bash
-docker compose up --build
-```
-
-To run in the background (detached mode):
 ```bash
 docker compose up -d --build
 ```
@@ -28,21 +23,50 @@ docker compose down
 
 | Component | URL | Description |
 | :--- | :--- | :--- |
-| **Web UI** | [http://localhost:80](http://localhost:80) or [http://localhost:5500](http://localhost:5500) | Full responsive frontend dashboard |
-| **Swagger UI** | [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html) | Interactive OpenAPI / Swagger REST documentation |
-| **API Docs (OpenAPI)** | [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs) | Raw OpenAPI v3 JSON spec |
-| **Health Check** | [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health) | Spring Boot actuator health endpoint |
+| **Web UI** | [http://localhost:5500](http://localhost:5500) (or [http://localhost:80](http://localhost:80)) | Full responsive frontend dashboard |
+| **Interactive API Docs** | [http://localhost:8080/docs](http://localhost:8080/docs) | FastAPI OpenAPI 3.1 / Swagger UI |
+| **Redoc API Spec** | [http://localhost:8080/redoc](http://localhost:8080/redoc) | Alternate clean API documentation |
+| **Health Check** | [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health) | Health status probe (`{"status":"UP"}`) |
 | **MySQL Database** | `localhost:3306` | User: `expense_user` / DB: `expense_db` |
 
 ---
 
-## 🛠️ Tech Stack (100% Free & Open Source)
+## 📚 Requirements & Test Plans Routing
 
-- **Backend**: Java 21, Spring Boot 3.3.4, Spring Data JPA, Spring Security 6, JJWT 0.12.6, Springdoc OpenAPI 2.6.0
+Every functional domain has a dedicated requirement specification and corresponding test plan:
+
+| Functional Domain | Requirements Specification | Quality & Test Plan |
+| :--- | :--- | :--- |
+| **Master Catalogs** | [Requirements Catalog](file:///Users/pasupathithumbur/pasu-t/budget-manager/docs/requirements/README.md) | [Test Plans Catalog](file:///Users/pasupathithumbur/pasu-t/budget-manager/docs/testplans/README.md) |
+| **Authentication & Security** | [auth-requirements.md](file:///Users/pasupathithumbur/pasu-t/budget-manager/docs/requirements/auth-requirements.md) | [auth-testplan.md](file:///Users/pasupathithumbur/pasu-t/budget-manager/docs/testplans/auth-testplan.md) |
+| **Household Collaboration** | [household-requirements.md](file:///Users/pasupathithumbur/pasu-t/budget-manager/docs/requirements/household-requirements.md) | [household-testplan.md](file:///Users/pasupathithumbur/pasu-t/budget-manager/docs/testplans/household-testplan.md) |
+| **Expenses & Income** | [expenses-income-requirements.md](file:///Users/pasupathithumbur/pasu-t/budget-manager/docs/requirements/expenses-income-requirements.md) | [expenses-income-testplan.md](file:///Users/pasupathithumbur/pasu-t/budget-manager/docs/testplans/expenses-income-testplan.md) |
+| **Budgets & Alerts** | [budgets-requirements.md](file:///Users/pasupathithumbur/pasu-t/budget-manager/docs/requirements/budgets-requirements.md) | [budgets-testplan.md](file:///Users/pasupathithumbur/pasu-t/budget-manager/docs/testplans/budgets-testplan.md) |
+| **Payment Reminders** | [reminders-requirements.md](file:///Users/pasupathithumbur/pasu-t/budget-manager/docs/requirements/reminders-requirements.md) | [reminders-testplan.md](file:///Users/pasupathithumbur/pasu-t/budget-manager/docs/testplans/reminders-testplan.md) |
+| **Savings Goals** | [savings-requirements.md](file:///Users/pasupathithumbur/pasu-t/budget-manager/docs/requirements/savings-requirements.md) | [savings-testplan.md](file:///Users/pasupathithumbur/pasu-t/budget-manager/docs/testplans/savings-testplan.md) |
+| **Analytics & Reports** | [reports-requirements.md](file:///Users/pasupathithumbur/pasu-t/budget-manager/docs/requirements/reports-requirements.md) | [reports-testplan.md](file:///Users/pasupathithumbur/pasu-t/budget-manager/docs/testplans/reports-testplan.md) |
+
+---
+
+## 🛠️ Tech Stack
+
+- **Backend**: Python 3.15, FastAPI, SQLAlchemy 2.0, Pydantic v2, PyMySQL, Bcrypt, Python-Jose (JWT)
+- **Dependency & Runtime Management**: `uv` (Astral toolchain)
 - **Database**: MySQL 8.0 Community Edition
-- **Frontend**: HTML5, CSS3, JavaScript (ES6+), Bootstrap 5, Chart.js
-- **Reverse Proxy & Server**: NGINX 1.27 Alpine
-- **Containerization**: Docker & Docker Compose with multi-stage build caching
+- **Frontend**: Responsive HTML5, CSS3, JavaScript (ES6+), Bootstrap 5, Chart.js
+- **Reverse Proxy**: NGINX 1.27 Alpine
+- **Containerization**: Docker Compose with multi-stage build caching
+- **Testing**: `pytest` configured via `pyproject.toml` (`[tool.pytest.ini_options]`)
+
+---
+
+## 🧪 Running Unit Tests
+
+Execute backend unit tests with `uv`:
+```bash
+cd backend
+uv run pytest
+```
 
 ---
 
@@ -50,15 +74,18 @@ docker compose down
 
 ```text
 budget-manager/
-├── backend/                # Java 21 + Spring Boot 3 REST API
-│   ├── Dockerfile          # Multi-stage Maven + Temurin JRE build
-│   ├── pom.xml
-│   └── src/
-├── frontend/               # Web Application
-│   ├── Dockerfile          # Lightweight Nginx static host
-│   ├── nginx.conf          # Reverse proxy routing /api to backend
-│   ├── *.html, *.css, *.js
-├── docker-compose.yml      # Orchestrates MySQL + Backend + Frontend
-├── .dockerignore
-└── SETUP.md                # Comprehensive setup and API test guide
+├── backend/                # Python 3.15 + FastAPI REST API
+│   ├── app/                # Vertical slice architecture
+│   ├── tests/unit/         # Unit test suite
+│   ├── pyproject.toml      # UV dependency & pytest configuration
+│   └── Dockerfile          # Optimized container build
+├── frontend/               # Responsive Web Application
+│   ├── Dockerfile          # Lightweight Nginx host
+│   ├── nginx.conf          # API reverse proxy
+│   └── *.html, *.css, *.js
+├── docs/                   # Documentation & Specifications
+│   ├── requirements/       # Functional requirements catalog & domain specs
+│   └── testplans/          # Test plans, matrices, and QA verification
+├── docker-compose.yml      # Orchestrates MySQL + FastAPI + Nginx
+└── README.md               # Master project overview
 ```
