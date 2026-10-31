@@ -12,3 +12,4 @@
 | **TC-AUTH-03** | Successful Login | Security | Correct username and password | HTTP 200 with signed JWT access token |
 | **TC-AUTH-04** | Invalid Password Login | Security | Correct username, incorrect password | HTTP 401 Unauthorized |
 | **TC-AUTH-05** | Expired / Tampered JWT | Security | Request with corrupted or expired signature | HTTP 401 Unauthorized |
+

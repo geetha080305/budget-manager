@@ -11,3 +11,4 @@
 | **TC-BDG-02** | 80% Threshold Warning | Business Logic | Spend reaches 420 (84%) | `exceeded=false`, `budgetAlert.remaining=80` returned |
 | **TC-BDG-03** | 100% Exceeded Alert | Business Logic | Spend reaches 520 (104%) | `exceeded=true`, alert flag raised on response |
 | **TC-BDG-04** | Invalid Month Boundary | Validation | Month: 13 | HTTP 422 rejected |
+

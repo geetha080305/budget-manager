@@ -8,3 +8,4 @@ Core transactional tracking for all money flows (inflow income and outflow expen
 - **REQ-EXP-02 (Add Income)**: Users can record an income source, amount (>0), date, and description.
 - **REQ-EXP-03 (List & Filter)**: Transactions must support listing and filtering by date range, payment method, or category.
 - **REQ-EXP-04 (Attribution)**: In household accounts, each transaction records the creator while remaining visible to the shared pool.
+

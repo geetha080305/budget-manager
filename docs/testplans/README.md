@@ -21,3 +21,4 @@ This document routes and tracks functional test suites, acceptance criteria, and
 
 ## 🔬 Testing Strategy & Automation
 - For testing levels (L1 Unit, L2 API, L3 E2E/Smoke), tooling standards, and CI integration, refer to the [Master Test Plan](file:///Users/pasupathithumbur/pasu-t/budget-manager/docs/testplans/master-testplan.md).
+

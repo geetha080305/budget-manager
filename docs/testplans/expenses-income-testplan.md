@@ -11,3 +11,4 @@
 | **TC-EXP-02** | Prevent Negative Amount | Boundary | Amount: -10.00 | HTTP 422 Unprocessable Entity (Pydantic validation) |
 | **TC-EXP-03** | Record Income | CRUD | Source: "Salary", Amount: 3000.00 | HTTP 200, balance incremented |
 | **TC-EXP-04** | Filter by Date Range | Functional | Query between 2026-10-01 and 2026-10-31 | Returns only records within bounds |
+

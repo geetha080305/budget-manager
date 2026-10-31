@@ -7,3 +7,4 @@ Actionable visualizations and financial summaries for informed decision making.
 - **REQ-REP-01 (Daily / Weekly / Monthly Reports)**: Summarize expenditure by time buckets.
 - **REQ-REP-02 (Category Share Breakdown)**: Compute percentage and amount split across categories for pie chart rendering.
 - **REQ-REP-03 (Cash Flow / Net Savings)**: Compute Net Cash Flow: $\text{Total Income} - \text{Total Expenses}$.
+

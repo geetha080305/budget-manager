@@ -9,3 +9,4 @@ Proactive financial limit tracking and early warning alerts against overspending
   - If spending is between $\ge 80\%$ and $< 100\%$ of the budget limit, return warning state `exceeded=false` with remaining balance.
   - If spending reaches $\ge 100\%$, set `exceeded=true`.
 - **REQ-BDG-03 (Real-time Calculation)**: Any newly logged expense recalculates category budget consumption on-the-fly and embeds budget alert status in the response.
+

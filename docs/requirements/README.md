@@ -22,3 +22,4 @@ This document acts as the master registry routing to all domain-specific specifi
 ## 📋 Comprehensive Baseline
 - For the full consolidated architectural and technical baseline, see the [Master Functional Requirements](file:///Users/pasupathithumbur/pasu-t/budget-manager/docs/requirements/functional-requirements.md).
 - To view test cases mapped against these requirements, consult the [Test Plans Master Catalog](file:///Users/pasupathithumbur/pasu-t/budget-manager/docs/testplans/README.md).
+
